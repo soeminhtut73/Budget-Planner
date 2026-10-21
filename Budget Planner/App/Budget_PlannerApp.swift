@@ -17,16 +17,18 @@ struct Budget_PlannerApp: App {
     }()
 
     init() {
+        let context = sharedModelContainer.mainContext
         do {
-            try SeedService.seedIfNeeded(context: sharedModelContainer.mainContext)
+            try SeedService.seedIfNeeded(context: context)
+            try RecurringService.postDueRules(context: context)
         } catch {
-            assertionFailure("First-launch seeding failed: \(error)")
+            assertionFailure("Launch setup failed: \(error)")
         }
     }
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            MainTabView()
         }
         .modelContainer(sharedModelContainer)
     }

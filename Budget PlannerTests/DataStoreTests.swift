@@ -137,4 +137,82 @@ struct DataStoreTests {
             #expect(try repo.activeCategories(kind: .expense).count == 7)
         }
     }
+
+    // MARK: Transaction service
+
+    /// Returns a seeded container. Tests must keep the returned container alive
+    /// for the duration of the test (the main context alone does not retain it).
+    private func seededContainer() throws -> ModelContainer {
+        let container = try makeContainer()
+        try SeedService.seedIfNeeded(context: container.mainContext)
+        return container
+    }
+
+    @Test("Creating an expense inserts it and reduces the wallet balance")
+    func createExpense() throws {
+        let container = try seededContainer()
+        let context = container.mainContext
+        let service = TransactionService(context: context)
+        let wallet = try #require(try SwiftDataWalletRepository(context: context).activeWallets().first)
+        let category = try #require(try SwiftDataCategoryRepository(context: context).activeCategories(kind: .expense).first)
+        wallet.openingBalance = 100
+
+        try service.create(kind: .expense, amount: dec("12.50"), category: category, wallet: wallet,
+                           occurredAt: .now, note: "Lunch", currencyCode: "USD")
+
+        let txs = try SwiftDataTransactionRepository(context: context).allTransactions()
+        #expect(txs.count == 1)
+        #expect(BalanceService.walletBalance(wallet, transactions: txs) == dec("87.50"))
+    }
+
+    @Test("Repeating income creates a RecurringRule with a future next date")
+    func createRepeatingIncome() throws {
+        let container = try seededContainer()
+        let context = container.mainContext
+        let service = TransactionService(context: context)
+        let wallet = try #require(try SwiftDataWalletRepository(context: context).activeWallets().first)
+        let category = try #require(try SwiftDataCategoryRepository(context: context).activeCategories(kind: .income).first)
+
+        try service.create(kind: .income, amount: dec("3000"), category: category, wallet: wallet,
+                           occurredAt: .now, note: nil, repeatMonthly: true, currencyCode: "USD")
+
+        let rules = try SwiftDataRecurringRuleRepository(context: context).activeRules()
+        #expect(rules.count == 1)
+        #expect(rules.first?.nextOccurrence ?? .distantPast > .now)
+    }
+
+    @Test("Deleting a transaction soft-deletes it")
+    func deleteTransaction() throws {
+        let container = try seededContainer()
+        let context = container.mainContext
+        let service = TransactionService(context: context)
+        let wallet = try #require(try SwiftDataWalletRepository(context: context).activeWallets().first)
+        let category = try #require(try SwiftDataCategoryRepository(context: context).activeCategories(kind: .expense).first)
+        try service.create(kind: .expense, amount: dec("5"), category: category, wallet: wallet,
+                           occurredAt: .now, note: nil, currencyCode: "USD")
+
+        let repo = SwiftDataTransactionRepository(context: context)
+        let tx = try #require(try repo.allTransactions().first)
+        try service.delete(tx)
+        #expect(try repo.allTransactions().isEmpty)
+        #expect(tx.deletedAt != nil)
+    }
+
+    @Test("postDueRules posts overdue occurrences and advances the rule")
+    func postsDueRecurring() throws {
+        let container = try seededContainer()
+        let context = container.mainContext
+        let wallet = try #require(try SwiftDataWalletRepository(context: context).activeWallets().first)
+        let category = try #require(try SwiftDataCategoryRepository(context: context).activeCategories(kind: .income).first)
+
+        let twoMonthsAgo = Calendar.current.date(byAdding: .month, value: -2, to: .now) ?? .now
+        let rule = RecurringRule(kind: .income, amount: 1000, frequency: .monthly, dayOfMonth: 15,
+                                 nextOccurrence: twoMonthsAgo, isActive: true, wallet: wallet, category: category)
+        context.insert(rule)
+        try context.save()
+
+        let created = try RecurringService.postDueRules(context: context, asOf: .now)
+        #expect(created.count >= 2)
+        #expect(rule.nextOccurrence > .now)
+    }
 }

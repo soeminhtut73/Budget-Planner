@@ -84,5 +84,14 @@ enum SampleData {
 
         try context.save()
     }
+
+    /// Removes all transactions and recurring rules (keeps wallets, categories
+    /// and settings). For resetting after loading sample data.
+    @MainActor
+    static func clearTransactions(context: ModelContext) throws {
+        try context.delete(model: Transaction.self)
+        try context.delete(model: RecurringRule.self)
+        try context.save()
+    }
 }
 #endif
