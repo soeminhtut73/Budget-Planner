@@ -2,9 +2,9 @@
 //  CategoryLabel.swift
 //  Pocket Ledger
 //
-//  Renders a category's name, localizing default categories through the String
-//  Catalog (so it follows the environment locale) and showing the typed name
-//  for custom ones.
+//  Renders a category's resolved name (localized default, or the typed custom
+//  name). Uses `displayName` rather than an interpolated LocalizedStringKey,
+//  which would otherwise be mis-parsed as a format string.
 //
 
 import SwiftUI
@@ -13,10 +13,6 @@ struct CategoryLabel: View {
     let category: Category
 
     var body: some View {
-        if let titleKey = category.titleKey {
-            Text(titleKey)
-        } else {
-            Text(category.customName ?? "")
-        }
+        Text(category.displayName)
     }
 }

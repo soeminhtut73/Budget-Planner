@@ -215,4 +215,101 @@ struct DataStoreTests {
         #expect(created.count >= 2)
         #expect(rule.nextOccurrence > .now)
     }
+
+    // MARK: Activity query
+
+    /// Inserts `count` expenses in the current month, one minute apart.
+    private func insertMonthExpenses(context: ModelContext, count: Int) throws -> [UUID] {
+        let wallet = try #require(try SwiftDataWalletRepository(context: context).activeWallets().first)
+        let category = try #require(try SwiftDataCategoryRepository(context: context).activeCategories(kind: .expense).first)
+        let cal = Calendar.current
+        let monthStart = cal.date(from: cal.dateComponents([.year, .month], from: .now)) ?? .now
+        var ids: [UUID] = []
+        for i in 0..<count {
+            let tx = Transaction(
+                kind: .expense, amount: 1,
+                occurredAt: monthStart.addingTimeInterval(Double(i + 1) * 60),
+                timeZoneID: TimeZone.current.identifier,
+                wallet: wallet, category: category,
+                createdAt: monthStart.addingTimeInterval(Double(i))
+            )
+            context.insert(tx)
+            ids.append(tx.id)
+        }
+        try context.save()
+        return ids
+    }
+
+    @Test("Cursor paging yields every record once, even when one is inserted mid-paging")
+    func cursorPagingNoDuplicatesOrGaps() throws {
+        let container = try seededContainer()
+        let context = container.mainContext
+        let originalIDs = try insertMonthExpenses(context: context, count: 120)
+
+        let query = ActivityQuery(context: context)
+        let filters = ActivityFilters(month: .now)
+        var cursor: TransactionCursor?
+        var collected: [UUID] = []
+
+        while true {
+            let page = try query.page(filters: filters, matchedCategoryIDs: [], after: cursor, limit: 50)
+            if page.isEmpty { break }
+            collected.append(contentsOf: page.map(\.id))
+            let last = page[page.count - 1]
+            cursor = TransactionCursor(occurredAt: last.occurredAt, createdAt: last.createdAt)
+
+            // After the first page, insert a brand-new newest record.
+            if collected.count == 50 {
+                let wallet = try #require(try SwiftDataWalletRepository(context: context).activeWallets().first)
+                let cal = Calendar.current
+                let monthStart = cal.date(from: cal.dateComponents([.year, .month], from: .now)) ?? .now
+                context.insert(Transaction(kind: .expense, amount: 1,
+                                           occurredAt: monthStart.addingTimeInterval(200 * 60),
+                                           timeZoneID: TimeZone.current.identifier, wallet: wallet))
+                try context.save()
+            }
+            if page.count < 50 { break }
+        }
+
+        #expect(collected.count == 120)                 // no gaps
+        #expect(Set(collected).count == 120)             // no duplicates
+        #expect(Set(originalIDs).isSubset(of: Set(collected)))
+    }
+
+    @Test("Kind filter returns only that kind")
+    func kindFilter() throws {
+        let container = try seededContainer()
+        let context = container.mainContext
+        let service = TransactionService(context: context)
+        let wallet = try #require(try SwiftDataWalletRepository(context: context).activeWallets().first)
+        let expenseCat = try #require(try SwiftDataCategoryRepository(context: context).activeCategories(kind: .expense).first)
+        let incomeCat = try #require(try SwiftDataCategoryRepository(context: context).activeCategories(kind: .income).first)
+        try service.create(kind: .expense, amount: 10, category: expenseCat, wallet: wallet, occurredAt: .now, note: nil, currencyCode: "USD")
+        try service.create(kind: .income, amount: 20, category: incomeCat, wallet: wallet, occurredAt: .now, note: nil, currencyCode: "USD")
+
+        let query = ActivityQuery(context: context)
+        let incomeOnly = try query.page(filters: ActivityFilters(month: .now, kind: .income), matchedCategoryIDs: [], after: nil)
+        #expect(incomeOnly.allSatisfy { $0.kind == .income })
+        #expect(incomeOnly.count == 1)
+    }
+
+    @Test("Day sections group records and carry the day's net total")
+    func daySectionsAndTotals() throws {
+        let container = try seededContainer()
+        let context = container.mainContext
+        let wallet = try #require(try SwiftDataWalletRepository(context: context).activeWallets().first)
+        let tz = TimeZone.current.identifier
+        let today = Date.now
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today) ?? today
+        // Today: +100 income, -30 expense → net 70. Yesterday: -10 → net -10.
+        context.insert(Transaction(kind: .income, amount: 100, occurredAt: today, timeZoneID: tz, wallet: wallet))
+        context.insert(Transaction(kind: .expense, amount: 30, occurredAt: today, timeZoneID: tz, wallet: wallet))
+        context.insert(Transaction(kind: .expense, amount: 10, occurredAt: yesterday, timeZoneID: tz, wallet: wallet))
+        try context.save()
+
+        let model = ActivityViewModel(context: context)
+        #expect(model.sections.count == 2)
+        #expect(model.sections.first?.net == 70)
+        #expect(model.sections.last?.net == -10)
+    }
 }

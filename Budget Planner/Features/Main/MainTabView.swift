@@ -15,14 +15,18 @@ struct MainTabView: View {
     @Environment(\.modelContext) private var context
     @State private var selectedTab: Tab = .home
     @State private var showAdd = false
+    @State private var activityWalletID: UUID?
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             TabView(selection: $selectedTab) {
-                HomeView(onShowActivity: { _ in selectedTab = .activity })
+                HomeView(onShowActivity: { wallet in
+                    activityWalletID = wallet?.id
+                    selectedTab = .activity
+                })
                     .tabItem { Label("Home", systemImage: "house.fill") }
                     .tag(Tab.home)
-                ActivityPlaceholderView()
+                ActivityView(context: context, requestedWalletID: $activityWalletID)
                     .tabItem { Label("Activity", systemImage: "list.bullet") }
                     .tag(Tab.activity)
                 PlanPlaceholderView()
