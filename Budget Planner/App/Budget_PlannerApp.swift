@@ -16,6 +16,14 @@ struct Budget_PlannerApp: App {
         }
     }()
 
+    init() {
+        do {
+            try SeedService.seedIfNeeded(context: sharedModelContainer.mainContext)
+        } catch {
+            assertionFailure("First-launch seeding failed: \(error)")
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

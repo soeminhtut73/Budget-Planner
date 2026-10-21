@@ -75,6 +75,102 @@ struct SwiftDataTransactionRepository: TransactionRepository {
     func save() throws { try context.save() }
 }
 
+struct SwiftDataCategoryRepository: CategoryRepository {
+    let context: ModelContext
+
+    func activeCategories(kind: CategoryKind) throws -> [Category] {
+        // Kind is an enum; filter it in memory to avoid enum-in-#Predicate limits.
+        try allCategories()
+            .filter { $0.kind == kind && !$0.isArchived }
+            .sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    func allCategories() throws -> [Category] {
+        let descriptor = FetchDescriptor<Category>(
+            predicate: #Predicate { $0.deletedAt == nil },
+            sortBy: [SortDescriptor(\.sortOrder)]
+        )
+        return try context.fetch(descriptor)
+    }
+
+    func category(id: UUID) throws -> Category? {
+        var descriptor = FetchDescriptor<Category>(
+            predicate: #Predicate { $0.id == id && $0.deletedAt == nil }
+        )
+        descriptor.fetchLimit = 1
+        return try context.fetch(descriptor).first
+    }
+
+    func insert(_ category: Category) { context.insert(category) }
+
+    func softDelete(_ category: Category) {
+        category.deletedAt = .now
+        category.updatedAt = .now
+    }
+
+    func save() throws { try context.save() }
+}
+
+struct SwiftDataRecurringRuleRepository: RecurringRuleRepository {
+    let context: ModelContext
+
+    func activeRules() throws -> [RecurringRule] {
+        let descriptor = FetchDescriptor<RecurringRule>(
+            predicate: #Predicate { $0.deletedAt == nil && $0.isActive == true },
+            sortBy: [SortDescriptor(\.nextOccurrence)]
+        )
+        return try context.fetch(descriptor)
+    }
+
+    func allRules() throws -> [RecurringRule] {
+        let descriptor = FetchDescriptor<RecurringRule>(
+            predicate: #Predicate { $0.deletedAt == nil },
+            sortBy: [SortDescriptor(\.nextOccurrence)]
+        )
+        return try context.fetch(descriptor)
+    }
+
+    func rule(id: UUID) throws -> RecurringRule? {
+        var descriptor = FetchDescriptor<RecurringRule>(
+            predicate: #Predicate { $0.id == id && $0.deletedAt == nil }
+        )
+        descriptor.fetchLimit = 1
+        return try context.fetch(descriptor).first
+    }
+
+    func insert(_ rule: RecurringRule) { context.insert(rule) }
+
+    func softDelete(_ rule: RecurringRule) {
+        rule.deletedAt = .now
+        rule.updatedAt = .now
+    }
+
+    func save() throws { try context.save() }
+}
+
+struct SwiftDataAppSettingsRepository: AppSettingsRepository {
+    let context: ModelContext
+
+    func current() throws -> AppSettings? {
+        var descriptor = FetchDescriptor<AppSettings>(
+            predicate: #Predicate { $0.deletedAt == nil },
+            sortBy: [SortDescriptor(\.createdAt)]
+        )
+        descriptor.fetchLimit = 1
+        return try context.fetch(descriptor).first
+    }
+
+    func ensureDefault() throws -> AppSettings {
+        if let existing = try current() { return existing }
+        let settings = AppSettings()
+        context.insert(settings)
+        try context.save()
+        return settings
+    }
+
+    func save() throws { try context.save() }
+}
+
 struct SwiftDataGoalRepository: GoalRepository {
     let context: ModelContext
 

@@ -30,6 +30,36 @@ protocol TransactionRepository {
     func save() throws
 }
 
+protocol CategoryRepository {
+    /// Non-deleted, non-archived categories of a kind, ordered by `sortOrder`.
+    func activeCategories(kind: CategoryKind) throws -> [Category]
+    /// All non-deleted categories (both kinds, including archived).
+    func allCategories() throws -> [Category]
+    func category(id: UUID) throws -> Category?
+    func insert(_ category: Category)
+    func softDelete(_ category: Category)
+    func save() throws
+}
+
+protocol RecurringRuleRepository {
+    /// Non-deleted, active rules.
+    func activeRules() throws -> [RecurringRule]
+    /// All non-deleted rules.
+    func allRules() throws -> [RecurringRule]
+    func rule(id: UUID) throws -> RecurringRule?
+    func insert(_ rule: RecurringRule)
+    func softDelete(_ rule: RecurringRule)
+    func save() throws
+}
+
+protocol AppSettingsRepository {
+    /// The current settings record, if one exists.
+    func current() throws -> AppSettings?
+    /// Returns the existing settings or creates and persists defaults.
+    func ensureDefault() throws -> AppSettings
+    func save() throws
+}
+
 protocol GoalRepository {
     /// Non-deleted goals that are not archived.
     func activeGoals() throws -> [Goal]

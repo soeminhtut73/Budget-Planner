@@ -23,21 +23,17 @@
 /* Begin PBXFileReference section */
 		04E8BA2F3089056F0057CF02 /* Budget Planner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Budget Planner.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		35F4CD0D474A195F47C9BACD /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
-		5692D539C711DB385927322B /* Budget PlannerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = "Budget PlannerTests.xctest"; path = .xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5692D539C711DB385927322B /* Budget PlannerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Budget PlannerTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		04E8BA313089056F0057CF02 /* Budget Planner */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "Budget Planner";
 			sourceTree = "<group>";
 		};
 		2DF3CCBA221F93F3159F80D3 /* Budget PlannerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "Budget PlannerTests";
 			sourceTree = "<group>";
 		};

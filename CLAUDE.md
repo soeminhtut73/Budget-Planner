@@ -20,7 +20,7 @@ V1 is **local-only** (on-device storage, no backend). Loans, shared agreements, 
 
 ## Tech stack
 
-- Swift, SwiftUI, **iOS 17+**
+- Swift, SwiftUI, **iOS 18+**
 - **SwiftData** for storage, `@Observable` view models (MVVM)
 - Swift Charts for reports
 - Swift Testing for unit tests
@@ -53,7 +53,7 @@ V1 is **local-only** (on-device storage, no backend). Loans, shared agreements, 
 - Export: CSV and full JSON backup
 - Settings: currency, language, budget month start day, wallets, categories, notifications, Face ID lock
 - Localization: English + Burmese (`en`, `my`)
-- **Owl mascot** drawn in pure SwiftUI with 6 states, plus goal-completed celebration (confetti + haptic) — see "Mascot"
+- **Mascot:** V1 ships a non-animated `MascotView` placeholder that reserves its final footprint. The full character (an original character, not an owl) with its 6 states and goal-completed celebration ships in **v1.1** — see "Mascot".
 
 ### Not in V1 (V2 and later)
 - Loans module and loan calculator
@@ -344,7 +344,8 @@ Each milestone: plan → approval → implement → tests pass → commit.
 - Records are never reset or deleted by the system; budget spent is calculated.
 - Activity loads 50 per page with cursor pagination.
 - Loans and all server features move to V2.
-- Mascot: teal owl, drawn in pure SwiftUI, ships in V1 (moved from v1.1) with 6 states: idle, cashIn, cashOut, saving, goalReached, overLimit.
+- Deployment target is **iOS 18+** (raised from 17+).
+- Mascot: an **original character** (not an owl), drawn in pure SwiftUI, ships in **v1.1**. V1 uses a non-animated `MascotView` placeholder that reserves its final footprint; the 6 states (idle, cashIn, cashOut, saving, goalReached, overLimit) and `MascotController` move to v1.1. The `MascotView` API is kept stable so the character drops in without changing call sites.
 - Mascot moods are driven by one `MascotController`; reactions are one-shot, `idle` / `overLimit` are base moods.
 - Goal completion shows `GoalCompletedView` with confetti and success haptic (no assets).
 - Icons are SF Symbols; buttons and motion are native SwiftUI; the app icon is the only custom asset.
