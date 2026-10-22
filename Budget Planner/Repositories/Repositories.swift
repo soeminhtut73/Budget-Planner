@@ -71,6 +71,8 @@ protocol BudgetRepository {
     /// that `effectiveFrom`, otherwise appends a new one (preserving history).
     func setLimit(_ budget: Budget, amount: Decimal, effectiveFrom: Date) throws
     func archive(_ budget: Budget) throws
+    /// Soft-deletes a budget, freeing its category to be budgeted again.
+    func delete(_ budget: Budget) throws
     func save() throws
 }
 

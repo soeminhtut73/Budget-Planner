@@ -18,9 +18,11 @@ struct BudgetDetailView: View {
     private var transactions: [Transaction]
     @Query private var settingsList: [AppSettings]
 
+    @Environment(\.dismiss) private var dismiss
     @State private var monthOffset = 0
     @State private var showEdit = false
     @State private var showAddExpense = false
+    @State private var showDeleteConfirm = false
 
     private var settings: AppSettings? { settingsList.first }
     private var currencyCode: String { settings?.mainCurrency ?? "USD" }
@@ -56,11 +58,33 @@ struct BudgetDetailView: View {
         .safeAreaInset(edge: .bottom) { addExpenseBar }
         .navigationTitle(budget.category?.displayName ?? "Budget")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Edit") { showEdit = true } } }
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Menu {
+                    Button { showEdit = true } label: { Label("Edit budget", systemImage: "pencil") }
+                    Button(role: .destructive) { showDeleteConfirm = true } label: {
+                        Label("Delete budget", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
         .sheet(isPresented: $showEdit) { AddEditBudgetView(editingBudget: budget) }
         .sheet(isPresented: $showAddExpense) {
             AddTransactionView(context: context, presetCategoryID: budget.category?.id)
         }
+        .confirmationDialog("Delete this budget?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+            Button("Delete budget", role: .destructive) { deleteBudget() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your records stay; only the spending limit is removed.")
+        }
+    }
+
+    private func deleteBudget() {
+        try? SwiftDataBudgetRepository(context: context).delete(budget)
+        dismiss()
     }
 
     private var monthSwitcher: some View {

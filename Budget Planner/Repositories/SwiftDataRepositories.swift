@@ -218,6 +218,12 @@ struct SwiftDataBudgetRepository: BudgetRepository {
         try context.save()
     }
 
+    func delete(_ budget: Budget) throws {
+        budget.deletedAt = .now
+        budget.updatedAt = .now
+        try context.save()
+    }
+
     func save() throws { try context.save() }
 }
 

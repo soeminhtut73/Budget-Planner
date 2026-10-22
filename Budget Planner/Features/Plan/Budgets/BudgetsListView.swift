@@ -19,6 +19,8 @@ struct BudgetsListView: View {
     @Query private var settingsList: [AppSettings]
 
     @State private var showAdd = false
+    @State private var editingBudget: Budget?
+    @State private var pendingDelete: Budget?
 
     private var settings: AppSettings? { settingsList.first }
     private var currencyCode: String { settings?.mainCurrency ?? "USD" }
@@ -56,6 +58,22 @@ struct BudgetsListView: View {
         }
         .sheet(isPresented: $showAdd) {
             AddEditBudgetView()
+        }
+        .sheet(item: $editingBudget) { budget in
+            AddEditBudgetView(editingBudget: budget)
+        }
+        .confirmationDialog(
+            "Delete this budget?",
+            isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Delete budget", role: .destructive) {
+                if let budget = pendingDelete { try? SwiftDataBudgetRepository(context: context).delete(budget) }
+                pendingDelete = nil
+            }
+            Button("Cancel", role: .cancel) { pendingDelete = nil }
+        } message: {
+            Text("Your records stay; only the spending limit is removed.")
         }
     }
 
@@ -100,6 +118,12 @@ struct BudgetsListView: View {
                         budgetRow(pair.budget, pair.stats)
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        Button { editingBudget = pair.budget } label: { Label("Edit budget", systemImage: "pencil") }
+                        Button(role: .destructive) { pendingDelete = pair.budget } label: {
+                            Label("Delete budget", systemImage: "trash")
+                        }
+                    }
                     if index < statsByBudget.count - 1 { Divider() }
                 }
             }
