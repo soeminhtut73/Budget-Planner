@@ -157,7 +157,7 @@ struct ActivityView: View {
                 ForEach(model.sections) { section in
                     Section {
                         ForEach(section.items) { tx in
-                            TransactionRow(transaction: tx, currencyCode: model.currencyCode)
+                            TransactionRow(transaction: tx)
                                 .contentShape(Rectangle())
                                 .onTapGesture { editing = tx }
                                 .onAppear { model.onRowAppear(tx) }
@@ -192,8 +192,7 @@ struct ActivityView: View {
             Spacer()
             AmountText(
                 amount: section.net,
-                style: section.net < 0 ? .expense : .income,
-                currencyCode: model.currencyCode
+                style: section.net < 0 ? .expense : .income
             )
             .font(.footnote.weight(.semibold))
         }
@@ -219,6 +218,12 @@ struct ActivityView: View {
     }
 }
 
-#Preview {
+#Preview("USD") {
     ActivityView(context: PreviewData.container().mainContext, requestedWalletID: .constant(nil))
+        .environment(\.money, MoneyFormatter(currencyCode: "USD"))
+}
+
+#Preview("MMK") {
+    ActivityView(context: PreviewData.container().mainContext, requestedWalletID: .constant(nil))
+        .environment(\.money, MoneyFormatter(currencyCode: "MMK"))
 }

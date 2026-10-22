@@ -12,6 +12,7 @@ struct GoalDetailView: View {
     let goal: Goal
 
     @Environment(\.modelContext) private var context
+    @Environment(\.money) private var money
     @Environment(\.dismiss) private var dismiss
     @Query private var settingsList: [AppSettings]
 
@@ -67,9 +68,9 @@ struct GoalDetailView: View {
         let monthlyNeeded = GoalMath.monthlyNeeded(saved: saved, target: target, targetDate: goal.targetDate)
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
-                Text(saved.formatted(.currency(code: currencyCode)))
+                Text(money.string(saved))
                     .font(.largeTitle.weight(.bold)).foregroundStyle(Theme.text)
-                Text("of \(target.formatted(.currency(code: currencyCode)))")
+                Text("of \(money.string(target))")
                     .foregroundStyle(Theme.secondaryText)
                 Spacer()
                 Text("\(Int((progress * 100).rounded()))%").foregroundStyle(Theme.secondaryText)
@@ -82,7 +83,7 @@ struct GoalDetailView: View {
                 }
                 Spacer()
                 if let monthlyNeeded, monthlyNeeded > 0 {
-                    Text("\(monthlyNeeded.formatted(.currency(code: currencyCode)))/month")
+                    Text("\(money.string(monthlyNeeded))/month")
                         .font(.footnote).foregroundStyle(Theme.secondaryText)
                 } else if GoalMath.isComplete(saved: saved, target: target) {
                     Text("Reached 🎉").font(.footnote.weight(.semibold)).foregroundStyle(Theme.primary)
@@ -141,8 +142,7 @@ struct GoalDetailView: View {
             }
             Spacer()
             AmountText(amount: entry.amount,
-                       style: entry.kind == .deposit ? .income : .expense,
-                       currencyCode: currencyCode)
+                       style: entry.kind == .deposit ? .income : .expense)
                 .fontWeight(.semibold)
         }
         .padding(.vertical, 4)

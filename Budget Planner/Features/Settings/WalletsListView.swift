@@ -31,8 +31,7 @@ struct WalletsListView: View {
                 Spacer()
                 AmountText(
                     amount: BalanceService.walletBalance(wallet, transactions: transactions),
-                    style: .neutral,
-                    currencyCode: currencyCode
+                    style: .neutral
                 )
                 .fontWeight(.semibold)
             }

@@ -11,6 +11,7 @@ import SwiftData
 
 struct BudgetsListView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.money) private var money
 
     @Query(filter: #Predicate<Budget> { $0.deletedAt == nil && $0.isArchived == false }, sort: \Budget.createdAt)
     private var budgets: [Budget]
@@ -90,10 +91,10 @@ struct BudgetsListView: View {
                 Text("\(daysLeft) days left").font(.caption).foregroundStyle(Theme.secondaryText)
             }
             HStack(alignment: .firstTextBaseline) {
-                Text("\(left.formatted(.currency(code: currencyCode))) left")
+                Text("\(money.string(left)) left")
                     .font(.title.weight(.bold)).foregroundStyle(Theme.text)
                 Spacer()
-                Text("\(totalSpent.formatted(.currency(code: currencyCode))) of \(totalLimit.formatted(.currency(code: currencyCode)))")
+                Text("\(money.string(totalSpent)) of \(money.string(totalLimit))")
                     .font(.subheadline).foregroundStyle(Theme.secondaryText)
             }
             ProgressBar(fraction: BudgetService.fraction(spent: totalSpent, limit: totalLimit),
@@ -145,7 +146,7 @@ struct BudgetsListView: View {
                     tag("Over 80%", color: Theme.warning)
                 }
                 Spacer()
-                Text("\(stats.spent.formatted(.currency(code: currencyCode))) / \(stats.limit.formatted(.currency(code: currencyCode)))")
+                Text("\(money.string(stats.spent)) / \(money.string(stats.limit))")
                     .font(.subheadline).foregroundStyle(Theme.secondaryText)
                 Image(systemName: "chevron.right").font(.caption).foregroundStyle(Theme.secondaryText)
             }
@@ -167,7 +168,7 @@ struct BudgetsListView: View {
         HStack {
             Text("Spent outside budgets").foregroundStyle(Theme.secondaryText)
             Spacer()
-            Text(outside.formatted(.currency(code: currencyCode))).foregroundStyle(Theme.text)
+            Text(money.string(outside)).foregroundStyle(Theme.text)
         }
         .font(.subheadline)
         .padding(.horizontal, 4)

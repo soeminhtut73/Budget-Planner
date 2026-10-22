@@ -10,13 +10,10 @@
 import Foundation
 
 enum CurrencyRounding {
-    /// Number of fractional digits a currency shows (its minor units).
-    /// Southeast-Asia defaults plus common cases; unknown codes fall back to 2.
+    /// Number of fractional digits a currency shows (its minor units), derived
+    /// from the currency's standard (see `CurrencyInfo`).
     static func minorUnits(for currencyCode: String) -> Int {
-        switch currencyCode.uppercased() {
-        case "MMK", "VND", "JPY", "KRW", "IDR", "LAK", "KHR": return 0
-        default: return 2  // USD, SGD, THB, PHP, EUR, …
-        }
+        CurrencyInfo.minorUnits(for: currencyCode)
     }
 
     /// Rounds `amount` to the currency's minor units (half up). For DISPLAY only.

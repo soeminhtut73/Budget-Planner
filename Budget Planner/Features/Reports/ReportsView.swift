@@ -13,6 +13,7 @@ import Charts
 
 struct ReportsView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.money) private var money
 
     @Query(filter: #Predicate<Transaction> { $0.deletedAt == nil })
     private var transactions: [Transaction]
@@ -94,6 +95,16 @@ struct ReportsView: View {
                 }
                 .chartForegroundStyleScale([incomeLabel: Theme.income, expenseLabel: Theme.expense])
                 .chartXScale(domain: labels)
+                .chartYAxis {
+                    AxisMarks { value in
+                        AxisGridLine()
+                        AxisValueLabel {
+                            if let amount = value.as(Double.self) {
+                                Text(money.compact(Decimal(amount)))
+                            }
+                        }
+                    }
+                }
                 .frame(height: 200)
             }
         }
@@ -142,7 +153,7 @@ struct ReportsView: View {
             Text(name).foregroundStyle(Theme.text)
             Spacer()
             Text("\(Int(pct.rounded()))%").font(.caption).foregroundStyle(Theme.secondaryText)
-            Text(spend.amount.formatted(.currency(code: currencyCode)))
+            Text(money.string(spend.amount))
                 .fontWeight(.semibold).foregroundStyle(Theme.text)
         }
         .font(.subheadline)

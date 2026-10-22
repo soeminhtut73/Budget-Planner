@@ -158,7 +158,7 @@ struct DataStoreTests {
         wallet.openingBalance = 100
 
         try service.create(kind: .expense, amount: dec("12.50"), category: category, wallet: wallet,
-                           occurredAt: .now, note: "Lunch", currencyCode: "USD")
+                           occurredAt: .now, note: "Lunch")
 
         let txs = try SwiftDataTransactionRepository(context: context).allTransactions()
         #expect(txs.count == 1)
@@ -174,7 +174,7 @@ struct DataStoreTests {
         let category = try #require(try SwiftDataCategoryRepository(context: context).activeCategories(kind: .income).first)
 
         try service.create(kind: .income, amount: dec("3000"), category: category, wallet: wallet,
-                           occurredAt: .now, note: nil, repeatMonthly: true, currencyCode: "USD")
+                           occurredAt: .now, note: nil, repeatMonthly: true)
 
         let rules = try SwiftDataRecurringRuleRepository(context: context).activeRules()
         #expect(rules.count == 1)
@@ -189,7 +189,7 @@ struct DataStoreTests {
         let wallet = try #require(try SwiftDataWalletRepository(context: context).activeWallets().first)
         let category = try #require(try SwiftDataCategoryRepository(context: context).activeCategories(kind: .expense).first)
         try service.create(kind: .expense, amount: dec("5"), category: category, wallet: wallet,
-                           occurredAt: .now, note: nil, currencyCode: "USD")
+                           occurredAt: .now, note: nil)
 
         let repo = SwiftDataTransactionRepository(context: context)
         let tx = try #require(try repo.allTransactions().first)
@@ -284,8 +284,8 @@ struct DataStoreTests {
         let wallet = try #require(try SwiftDataWalletRepository(context: context).activeWallets().first)
         let expenseCat = try #require(try SwiftDataCategoryRepository(context: context).activeCategories(kind: .expense).first)
         let incomeCat = try #require(try SwiftDataCategoryRepository(context: context).activeCategories(kind: .income).first)
-        try service.create(kind: .expense, amount: 10, category: expenseCat, wallet: wallet, occurredAt: .now, note: nil, currencyCode: "USD")
-        try service.create(kind: .income, amount: 20, category: incomeCat, wallet: wallet, occurredAt: .now, note: nil, currencyCode: "USD")
+        try service.create(kind: .expense, amount: 10, category: expenseCat, wallet: wallet, occurredAt: .now, note: nil)
+        try service.create(kind: .income, amount: 20, category: incomeCat, wallet: wallet, occurredAt: .now, note: nil)
 
         let query = ActivityQuery(context: context)
         let incomeOnly = try query.page(filters: ActivityFilters(month: .now, kind: .income), matchedCategoryIDs: [], after: nil)
@@ -400,7 +400,7 @@ struct DataStoreTests {
         let goal = try goalService.createGoal(name: "Trip", iconName: "airplane", target: 300, targetDate: nil,
                                               reminder: false, startingAmount: 150, sourceWallet: wallet)
         try txService.create(kind: .expense, amount: 100, category: food, wallet: wallet,
-                             occurredAt: .now, note: nil, paidFromGoal: goal, currencyCode: "USD")
+                             occurredAt: .now, note: nil, paidFromGoal: goal)
 
         // Goal drops by 100 (150 deposit − 100 spend).
         #expect(GoalMath.saved(for: goal) == dec("50"))

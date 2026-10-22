@@ -12,12 +12,24 @@ import SwiftData
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
+    @Query private var settingsList: [AppSettings]
+    @State private var showCurrency = false
+
+    private var currencyCode: String { settingsList.first?.mainCurrency ?? "USD" }
 
     var body: some View {
         NavigationStack {
             List {
                 Section("General") {
-                    placeholderRow("Currency", systemImage: "dollarsign.circle")
+                    Button {
+                        showCurrency = true
+                    } label: {
+                        HStack {
+                            Label("Currency", systemImage: "dollarsign.circle").foregroundStyle(Theme.text)
+                            Spacer()
+                            Text(currencyCode).foregroundStyle(Theme.secondaryText)
+                        }
+                    }
                     placeholderRow("Language", systemImage: "character.bubble")
                     placeholderRow("Budget month starts", systemImage: "calendar")
                 }
@@ -56,7 +68,24 @@ struct SettingsView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .confirmationDialog("Change currency", isPresented: $showCurrency, titleVisibility: .visible) {
+                ForEach(AppCurrencies.supported, id: \.self) { code in
+                    if code != currencyCode {
+                        Button(code) { changeCurrency(to: code) }
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Existing amounts won't be converted. Only the currency label changes.")
+            }
         }
+    }
+
+    private func changeCurrency(to code: String) {
+        guard let settings = settingsList.first else { return }
+        settings.mainCurrency = code
+        settings.updatedAt = .now
+        try? context.save()
     }
 
     private func placeholderRow(_ title: LocalizedStringKey, systemImage: String) -> some View {

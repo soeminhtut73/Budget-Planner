@@ -19,6 +19,7 @@ struct AddTransactionView: View {
     @State private var showDeleteConfirmation = false
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.money) private var money
 
     init(context: ModelContext, editing: Transaction? = nil, presetCategoryID: UUID? = nil) {
         _model = State(initialValue: AddTransactionViewModel(context: context, editing: editing, presetCategoryID: presetCategoryID))
@@ -126,7 +127,6 @@ struct AddTransactionView: View {
             AmountText(
                 amount: model.amount,
                 style: model.kind == .income ? .income : .neutral,
-                currencyCode: model.currencyCode,
                 tint: model.amount == 0 ? Theme.secondaryText : nil
             )
             .font(.system(size: 44, weight: .bold))
@@ -241,10 +241,10 @@ struct AddTransactionView: View {
         HStack {
             Text(label).foregroundStyle(Theme.secondaryText)
             Spacer()
-            Text(before, format: .currency(code: model.currencyCode))
+            Text(money.string(before))
                 .foregroundStyle(Theme.secondaryText)
             Image(systemName: "arrow.right").font(.caption).foregroundStyle(Theme.secondaryText)
-            Text(after, format: .currency(code: model.currencyCode))
+            Text(money.string(after))
                 .fontWeight(.semibold)
                 .foregroundStyle(Theme.text)
         }

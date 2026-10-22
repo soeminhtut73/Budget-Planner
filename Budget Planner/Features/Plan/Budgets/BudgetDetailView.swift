@@ -14,6 +14,7 @@ struct BudgetDetailView: View {
     let budget: Budget
 
     @Environment(\.modelContext) private var context
+    @Environment(\.money) private var money
     @Query(filter: #Predicate<Transaction> { $0.deletedAt == nil })
     private var transactions: [Transaction]
     @Query private var settingsList: [AppSettings]
@@ -102,10 +103,10 @@ struct BudgetDetailView: View {
     private var summaryCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
-                Text("\(stats.remaining.formatted(.currency(code: currencyCode))) left")
+                Text("\(money.string(stats.remaining)) left")
                     .font(.title.weight(.bold)).foregroundStyle(stats.isOver100 ? Theme.expense : Theme.text)
                 Spacer()
-                Text("\(stats.spent.formatted(.currency(code: currencyCode))) of \(stats.limit.formatted(.currency(code: currencyCode))) · \(Int((stats.fraction * 100).rounded()))%")
+                Text("\(money.string(stats.spent)) of \(money.string(stats.limit)) · \(Int((stats.fraction * 100).rounded()))%")
                     .font(.subheadline).foregroundStyle(Theme.secondaryText)
             }
             ProgressBar(fraction: stats.fraction,
@@ -114,13 +115,13 @@ struct BudgetDetailView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("To stay under").font(.caption).foregroundStyle(Theme.secondaryText)
-                        Text("\(BudgetService.perDayAllowance(remaining: stats.remaining, period: period, asOf: .now, timeZoneID: tzID).formatted(.currency(code: currencyCode))) / day")
+                        Text("\(money.string(BudgetService.perDayAllowance(remaining: stats.remaining, period: period, asOf: .now, timeZoneID: tzID))) / day")
                             .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text)
                     }
                     Spacer()
                     VStack(alignment: .trailing, spacing: 2) {
                         Text("At this pace").font(.caption).foregroundStyle(Theme.secondaryText)
-                        Text("~\(BudgetService.paceProjection(spent: stats.spent, period: period, asOf: .now, timeZoneID: tzID).formatted(.currency(code: currencyCode)))")
+                        Text("~\(money.string(BudgetService.paceProjection(spent: stats.spent, period: period, asOf: .now, timeZoneID: tzID)))")
                             .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text)
                     }
                 }
@@ -140,7 +141,7 @@ struct BudgetDetailView: View {
                     .frame(maxWidth: .infinity).padding(.vertical, 20)
             } else {
                 ForEach(Array(records.prefix(5).enumerated()), id: \.element.id) { index, tx in
-                    TransactionRow(transaction: tx, currencyCode: currencyCode)
+                    TransactionRow(transaction: tx)
                     if index < min(records.count, 5) - 1 { Divider() }
                 }
                 if let categoryID = budget.category?.id {

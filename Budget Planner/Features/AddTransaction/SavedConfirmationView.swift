@@ -40,7 +40,7 @@ struct SavedConfirmationView: View {
                 Text("Logged")
                     .font(.title3.weight(.bold))
                     .foregroundStyle(Theme.text)
-                AmountText(amount: summary.amount, kind: summary.kind, currencyCode: summary.currencyCode)
+                AmountText(amount: summary.amount, kind: summary.kind)
                     .font(.title3.weight(.bold))
             }
 
@@ -69,7 +69,7 @@ struct SavedConfirmationView: View {
 
 #Preview {
     SavedConfirmationView(
-        summary: .init(amount: Decimal(string: "12.50")!, kind: .expense, categoryName: "Food", walletName: "Cash", currencyCode: "USD"),
+        summary: .init(amount: Decimal(string: "12.50")!, kind: .expense, categoryName: "Food", walletName: "Cash"),
         onAddAnother: {},
         onDismiss: {}
     )

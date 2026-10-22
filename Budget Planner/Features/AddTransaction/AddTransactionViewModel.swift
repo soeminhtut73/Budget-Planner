@@ -37,10 +37,12 @@ final class AddTransactionViewModel {
     var paidFromGoal: Goal?
 
     // Fixed context
-    let currencyCode: String
-    let minorUnits: Int
+    let money: MoneyFormatter
     let budgetStartDay: Int
     let mode: Mode
+
+    var currencyCode: String { money.currencyCode }
+    var minorUnits: Int { money.minorUnits }
 
     private let context: ModelContext
 
@@ -56,8 +58,8 @@ final class AddTransactionViewModel {
 
         let settings = try? SwiftDataAppSettingsRepository(context: context).ensureDefault()
         let code = settings?.mainCurrency ?? "USD"
-        self.currencyCode = code
-        self.minorUnits = CurrencyRounding.minorUnits(for: code)
+        self.money = MoneyFormatter(currencyCode: code)
+        let units = CurrencyInfo.minorUnits(for: code)
         self.budgetStartDay = settings?.budgetStartDay ?? 1
 
         let categoryRepo = SwiftDataCategoryRepository(context: context)
@@ -74,7 +76,7 @@ final class AddTransactionViewModel {
         if let tx = editing {
             self.mode = .edit(tx)
             self.kind = tx.kind
-            self.amountInput = AmountInput.from(tx.amount, minorUnits: minorUnits)
+            self.amountInput = AmountInput.from(tx.amount, minorUnits: units)
             self.category = tx.category
             self.wallet = tx.wallet
             self.occurredAt = tx.occurredAt
@@ -83,7 +85,7 @@ final class AddTransactionViewModel {
             self.paidFromGoal = tx.paidFromGoal
         } else {
             self.mode = .create
-            self.amountInput = AmountInput(minorUnits: minorUnits)
+            self.amountInput = AmountInput(minorUnits: units)
             self.occurredAt = .now
             self.wallet = allWallets.first
             if let presetCategoryID,
@@ -200,8 +202,7 @@ final class AddTransactionViewModel {
                 occurredAt: occurredAt,
                 note: note,
                 paidFromGoal: kind == .expense ? paidFromGoal : nil,
-                repeatMonthly: kind == .income && repeatMonthly,
-                currencyCode: currencyCode
+                repeatMonthly: kind == .income && repeatMonthly
             )
             if kind == .expense {
                 scheduleBudgetAlertIfNeeded(category: category, addedAmount: amount, occurredAt: occurredAt)
@@ -215,8 +216,7 @@ final class AddTransactionViewModel {
                 category: category,
                 wallet: wallet,
                 occurredAt: occurredAt,
-                note: note,
-                currencyCode: currencyCode
+                note: note
             )
         }
     }
@@ -245,7 +245,6 @@ final class AddTransactionViewModel {
         guard limit > 0 else { return }
 
         let name = category.displayName
-        let code = currencyCode
 
         if BudgetService.crossedThreshold(1.0, priorSpent: priorSpent, newSpent: newSpent, limit: limit) {
             let title = String(localized: "Budget reached")
@@ -255,7 +254,7 @@ final class AddTransactionViewModel {
                   BudgetService.crossedThreshold(0.8, priorSpent: priorSpent, newSpent: newSpent, limit: limit) {
             let remaining = BudgetService.remaining(limit: limit, spent: newSpent)
             let title = String(localized: "Budget alert")
-            let body = String(localized: "You've used over 80% of your \(name) budget — \(remaining.formatted(.currency(code: code))) left.")
+            let body = String(localized: "You've used over 80% of your \(name) budget — \(money.string(remaining)) left.")
             Task { await NotificationService.fire(title: title, body: body) }
         }
     }

@@ -11,7 +11,6 @@ import SwiftUI
 
 struct TransactionRow: View {
     let transaction: Transaction
-    let currencyCode: String
 
     var body: some View {
         HStack(spacing: 12) {
@@ -30,7 +29,7 @@ struct TransactionRow: View {
 
             Spacer(minLength: 8)
 
-            AmountText(amount: transaction.amount, kind: transaction.kind, currencyCode: currencyCode)
+            AmountText(amount: transaction.amount, kind: transaction.kind)
                 .font(.body.weight(.semibold))
         }
         .padding(.vertical, 4)

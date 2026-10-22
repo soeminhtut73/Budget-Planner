@@ -15,6 +15,7 @@ struct HomeView: View {
     var onShowActivity: (Wallet?) -> Void = { _ in }
 
     @Environment(\.modelContext) private var context
+    @Environment(\.money) private var money
     @State private var showSettings = false
 
     @Query(filter: #Predicate<Transaction> { $0.deletedAt == nil }, sort: \Transaction.occurredAt, order: .reverse)
@@ -112,11 +113,11 @@ struct HomeView: View {
             Text("TOTAL BALANCE")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.75))
-            AmountText(amount: total, style: .neutral, currencyCode: currencyCode, tint: .white)
+            AmountText(amount: total, style: .neutral, tint: .white)
                 .font(.system(size: 40, weight: .bold))
                 .contentTransition(.numericText())
                 .animation(.snappy, value: total)
-            Text("Available \(available.formatted(.currency(code: currencyCode)))")
+            Text("Available \(money.string(available))")
                 .font(.subheadline)
                 .foregroundStyle(.white.opacity(0.85))
 
@@ -124,7 +125,7 @@ struct HomeView: View {
                 HStack(spacing: 8) {
                     ForEach(wallets) { wallet in
                         Button { onShowActivity(wallet) } label: {
-                            Text("\(wallet.name) \(BalanceService.walletBalance(wallet, transactions: transactions).formatted(.currency(code: currencyCode)))")
+                            Text("\(wallet.name) \(money.compact(BalanceService.walletBalance(wallet, transactions: transactions)))")
                                 .font(.footnote.weight(.medium))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 12).frame(height: 32)
@@ -156,7 +157,7 @@ struct HomeView: View {
     private func flowCard(titleKey: LocalizedStringKey, amount: Decimal, style: AmountStyle, fraction: Double, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(titleKey).font(.caption.weight(.semibold)).foregroundStyle(Theme.secondaryText)
-            AmountText(amount: amount, style: style, currencyCode: currencyCode)
+            AmountText(amount: amount, style: style)
                 .font(.title3.weight(.bold))
             bar(fraction: fraction, color: color)
         }
@@ -214,7 +215,7 @@ struct HomeView: View {
                     CategoryLabel(category: category).font(.headline).foregroundStyle(Theme.text)
                 }
                 Spacer()
-                Text("\(stats.remaining.formatted(.currency(code: currencyCode))) left · \(daysLeft) days")
+                Text("\(money.string(stats.remaining)) left · \(daysLeft) days")
                     .font(.footnote).foregroundStyle(Theme.secondaryText)
             }
             ProgressBar(fraction: stats.fraction, color: stats.isOver100 ? Theme.expense : Theme.warning)
@@ -244,7 +245,7 @@ struct HomeView: View {
                 .padding(.vertical, 24)
             } else {
                 ForEach(Array(recent.enumerated()), id: \.element.id) { index, tx in
-                    TransactionRow(transaction: tx, currencyCode: currencyCode)
+                    TransactionRow(transaction: tx)
                     if index < recent.count - 1 { Divider() }
                 }
             }
@@ -256,11 +257,14 @@ struct HomeView: View {
     }
 }
 
-#Preview("Light") {
-    HomeView().modelContainer(PreviewData.container())
+#Preview("USD") {
+    HomeView()
+        .modelContainer(PreviewData.container())
+        .environment(\.money, MoneyFormatter(currencyCode: "USD"))
 }
 
-#Preview("Dark") {
-    HomeView().modelContainer(PreviewData.container())
-        .preferredColorScheme(.dark)
+#Preview("MMK") {
+    HomeView()
+        .modelContainer(PreviewData.container())
+        .environment(\.money, MoneyFormatter(currencyCode: "MMK"))
 }

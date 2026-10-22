@@ -23,6 +23,7 @@ struct NewEditGoalView: View {
     @Query(filter: #Predicate<Goal> { $0.deletedAt == nil })
     private var goals: [Goal]
     @Query private var settingsList: [AppSettings]
+    @Environment(\.money) private var money
 
     @State private var name = ""
     @State private var iconName = "target"
@@ -37,7 +38,6 @@ struct NewEditGoalView: View {
     private let icons = ["target", "airplane", "house.fill", "car.fill", "gift.fill",
                          "graduationcap.fill", "heart.fill", "gamecontroller.fill"]
 
-    private var currencyCode: String { settingsList.first?.mainCurrency ?? "USD" }
     private var isEditing: Bool { editingGoal != nil }
     private var canSave: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty && target > 0 }
     private var available: Decimal {
@@ -103,7 +103,7 @@ struct NewEditGoalView: View {
             HStack {
                 Text("Target amount").foregroundStyle(Theme.secondaryText)
                 Spacer()
-                TextField("0", value: $target, format: .currency(code: currencyCode))
+                TextField("0", value: $target, format: money.currencyStyle)
                     .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
                     .fontWeight(.semibold).foregroundStyle(Theme.text)
             }
@@ -126,7 +126,7 @@ struct NewEditGoalView: View {
             HStack {
                 Text("Amount").foregroundStyle(Theme.secondaryText)
                 Spacer()
-                TextField("0", value: $startingAmount, format: .currency(code: currencyCode))
+                TextField("0", value: $startingAmount, format: money.currencyStyle)
                     .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
                     .fontWeight(.semibold).foregroundStyle(Theme.text)
             }
@@ -150,7 +150,7 @@ struct NewEditGoalView: View {
                 HStack {
                     Text("Save each month").foregroundStyle(Theme.secondaryText)
                     Spacer()
-                    Text("\((remainingAfterStart / Decimal(months)).formatted(.currency(code: currencyCode))) × \(months) months")
+                    Text("\(money.string(remainingAfterStart / Decimal(months))) × \(months) months")
                         .fontWeight(.semibold).foregroundStyle(Theme.text)
                 }
             }
@@ -163,7 +163,7 @@ struct NewEditGoalView: View {
                 HStack {
                     Text("Available to spend").foregroundStyle(Theme.secondaryText)
                     Spacer()
-                    Text("\(available.formatted(.currency(code: currencyCode))) → \((available - start).formatted(.currency(code: currencyCode)))")
+                    Text("\(money.string(available)) → \(money.string(available - start))")
                         .foregroundStyle(Theme.text)
                 }
             }

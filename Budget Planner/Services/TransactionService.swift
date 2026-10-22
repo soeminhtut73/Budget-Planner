@@ -19,7 +19,6 @@ struct TransactionService {
         let kind: TransactionKind
         let categoryName: String
         let walletName: String
-        let currencyCode: String
     }
 
     /// Creates a transaction (and, for repeating income, a RecurringRule).
@@ -32,8 +31,7 @@ struct TransactionService {
         occurredAt: Date,
         note: String?,
         paidFromGoal: Goal? = nil,
-        repeatMonthly: Bool = false,
-        currencyCode: String
+        repeatMonthly: Bool = false
     ) throws -> SavedSummary {
         let timeZoneID = TimeZone.current.identifier
         let transaction = Transaction(
@@ -75,7 +73,7 @@ struct TransactionService {
         }
 
         try context.save()
-        return summary(for: transaction, currencyCode: currencyCode)
+        return summary(for: transaction)
     }
 
     /// Updates an existing transaction's editable fields.
@@ -87,8 +85,7 @@ struct TransactionService {
         category: Category,
         wallet: Wallet,
         occurredAt: Date,
-        note: String?,
-        currencyCode: String
+        note: String?
     ) throws -> SavedSummary {
         transaction.kind = kind
         transaction.amount = amount
@@ -98,7 +95,7 @@ struct TransactionService {
         transaction.note = note?.isEmpty == true ? nil : note
         transaction.updatedAt = .now
         try context.save()
-        return summary(for: transaction, currencyCode: currencyCode)
+        return summary(for: transaction)
     }
 
     /// Soft-deletes a transaction (recoverable).
@@ -108,13 +105,12 @@ struct TransactionService {
         try context.save()
     }
 
-    private func summary(for transaction: Transaction, currencyCode: String) -> SavedSummary {
+    private func summary(for transaction: Transaction) -> SavedSummary {
         SavedSummary(
             amount: transaction.amount,
             kind: transaction.kind,
             categoryName: transaction.category?.displayName ?? "",
-            walletName: transaction.wallet?.name ?? "",
-            currencyCode: currencyCode
+            walletName: transaction.wallet?.name ?? ""
         )
     }
 }

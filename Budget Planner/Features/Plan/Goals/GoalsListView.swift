@@ -11,6 +11,7 @@ import SwiftData
 
 struct GoalsListView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.money) private var money
 
     @Query(filter: #Predicate<Goal> { $0.deletedAt == nil }, sort: \Goal.createdAt)
     private var allGoals: [Goal]
@@ -34,7 +35,7 @@ struct GoalsListView: View {
                     HStack {
                         Text("TOTAL SAVED").font(.caption.weight(.semibold)).foregroundStyle(Theme.secondaryText)
                         Spacer()
-                        Text(totalReserved.formatted(.currency(code: currencyCode)))
+                        Text(money.string(totalReserved))
                             .font(.title3.weight(.bold)).foregroundStyle(Theme.text)
                     }
                     ForEach(goals) { goal in
@@ -79,7 +80,7 @@ struct GoalsListView: View {
             }
             ProgressBar(fraction: progress)
             HStack {
-                Text("\(saved.formatted(.currency(code: currencyCode))) of \(target.formatted(.currency(code: currencyCode)))")
+                Text("\(money.string(saved)) of \(money.string(target))")
                     .font(.footnote).foregroundStyle(Theme.secondaryText)
                 if let date = goal.targetDate {
                     Text("· by \(date.formatted(.dateTime.month(.abbreviated).year()))")
@@ -90,7 +91,7 @@ struct GoalsListView: View {
             Divider()
             HStack {
                 if let monthlyNeeded, monthlyNeeded > 0 {
-                    Text("Save \(monthlyNeeded.formatted(.currency(code: currencyCode)))/month to stay on track")
+                    Text("Save \(money.string(monthlyNeeded))/month to stay on track")
                         .font(.footnote).foregroundStyle(Theme.secondaryText)
                 } else {
                     Text("Keep it up").font(.footnote).foregroundStyle(Theme.secondaryText)

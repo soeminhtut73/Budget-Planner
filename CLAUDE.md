@@ -35,6 +35,7 @@ V1 is **local-only** (on-device storage, no backend). Loans, shared agreements, 
 - No hardcoded user-facing strings — everything goes through the String Catalog.
 - Views stay thin: logic lives in view models and services.
 - Format numbers, currency and dates with the user's `Locale`, never by hand.
+- All money display goes through `MoneyFormatter` (injected via the `\.money` environment); never hardcode a currency code or symbol in a view. It uses the narrow symbol and the currency's standard minor units; the `+`/`−` sign comes from `AmountText`.
 
 ---
 
@@ -168,7 +169,7 @@ Tab bar: **Home · Activity · Plan · Reports**. Settings opens from the Home h
 
 ## Main workflows
 
-1. **First launch:** choose language (English / Burmese) and main currency → create first wallet(s) with opening balance → seed default categories → land on Home.
+1. **First launch:** choose **currency first** (the first onboarding step, pre-selected from the device region: MM → MMK, VN → VND, else USD) → then language → create first wallet(s) with opening balance → seed default categories → land on Home. Existing installs without a saved currency see the currency step once on next launch.
 2. **Add expense:** amount → category → wallet → (optional) date, note, paid from goal → Save → balances, budget and Activity update → confirmation card with mascot `cashOut`. If the save crosses 80% or 100% of a budget, schedule a local notification and show the Home alert card; at 100% the mascot turns sad (`overLimit`).
 3. **Add income:** amount → source → wallet → optional "Repeat monthly" → Save → mascot `cashIn`. Recurring rules create the next transaction automatically on its date (on app launch / background refresh) and tell the user it was added.
 4. **Edit or delete a record:** from Activity or Budget detail. Editing an old record updates past reports automatically (everything is calculated from records). Delete requires confirmation. Re-check over-limit state afterwards.
@@ -350,3 +351,4 @@ Each milestone: plan → approval → implement → tests pass → commit.
 - Goal completion shows `GoalCompletedView` with confetti and success haptic (no assets).
 - Icons are SF Symbols; buttons and motion are native SwiftUI; the app icon is the only custom asset.
 - Rive is the future path for a richer mascot; no Lottie, no GIFs.
+- Currency chosen at onboarding (MMK, VND, USD in V1, list extensible). Narrow symbol. Decimals follow the currency's standard (USD 2, MMK/VND 0), derived from the currency not a hardcoded switch. One `MoneyFormatter` (via `\.money`) formats all money; compact format only in wallet chips and chart labels. Changing currency relabels, doesn't convert existing amounts.

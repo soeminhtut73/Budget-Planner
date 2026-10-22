@@ -18,6 +18,7 @@ struct AddToGoalSheet: View {
     var onCompleted: () -> Void = {}
 
     @Environment(\.modelContext) private var context
+    @Environment(\.money) private var money
     @Environment(\.dismiss) private var dismiss
 
     @Query(filter: #Predicate<Wallet> { $0.deletedAt == nil }, sort: \Wallet.sortOrder)
@@ -48,9 +49,9 @@ struct AddToGoalSheet: View {
         NavigationStack {
             VStack(spacing: 16) {
                 VStack(spacing: 2) {
-                    Text("\(mode == .deposit ? String(localized: "Add") : String(localized: "Withdraw")) · \(currencyCode)")
+                    Text("\(mode == .deposit ? String(localized: "Add") : String(localized: "Withdraw")) · \(money.currencyCode)")
                         .font(.footnote).foregroundStyle(Theme.secondaryText)
-                    AmountText(amount: amount.value, style: .neutral, currencyCode: currencyCode,
+                    AmountText(amount: amount.value, style: .neutral,
                                tint: amount.value == 0 ? Theme.secondaryText : nil)
                         .font(.system(size: 40, weight: .bold))
                 }
@@ -71,7 +72,7 @@ struct AddToGoalSheet: View {
                 HStack {
                     Text("This leaves").foregroundStyle(Theme.secondaryText)
                     Spacer()
-                    Text("\(resultingAvailable.formatted(.currency(code: currencyCode))) available")
+                    Text("\(money.string(resultingAvailable)) available")
                         .fontWeight(.semibold)
                         .foregroundStyle(resultingAvailable < 0 ? Theme.expense : Theme.text)
                 }
@@ -79,7 +80,7 @@ struct AddToGoalSheet: View {
                 .padding(.horizontal, 4)
 
                 Spacer()
-                NumberPad(allowsDecimal: CurrencyRounding.minorUnits(for: currencyCode) > 0) { handleKey($0) }
+                NumberPad(allowsDecimal: money.minorUnits > 0) { handleKey($0) }
             }
             .padding()
             .background(Theme.background)
@@ -101,7 +102,7 @@ struct AddToGoalSheet: View {
     private func configure() {
         guard !didConfigure else { return }
         didConfigure = true
-        amount = AmountInput(minorUnits: CurrencyRounding.minorUnits(for: currencyCode))
+        amount = AmountInput(minorUnits: money.minorUnits)
         wallet = wallets.first
     }
 

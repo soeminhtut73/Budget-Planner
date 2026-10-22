@@ -35,7 +35,7 @@ struct SummaryCard<Content: View>: View {
 
 #Preview {
     SummaryCard(title: "Total balance") {
-        AmountText(amount: 5480, style: .neutral, currencyCode: "USD")
+        AmountText(amount: 5480, style: .neutral)
             .font(.largeTitle.weight(.bold))
     }
     .padding()

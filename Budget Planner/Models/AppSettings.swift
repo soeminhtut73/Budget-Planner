@@ -18,6 +18,9 @@ final class AppSettings {
     var language: String = "en"
     /// Day of month the budget period starts on (1...28).
     var budgetStartDay: Int = 1
+    /// Whether the user has picked a currency in onboarding (existing installs
+    /// default to false so they see the currency step once).
+    var currencyChosen: Bool = false
 
     var notifyBudgetAlerts: Bool = true
     var notifyGoalReminders: Bool = true
@@ -33,6 +36,7 @@ final class AppSettings {
         mainCurrency: String = "USD",
         language: String = "en",
         budgetStartDay: Int = 1,
+        currencyChosen: Bool = false,
         notifyBudgetAlerts: Bool = true,
         notifyGoalReminders: Bool = true,
         notifyRecurringPosted: Bool = true,
@@ -45,6 +49,7 @@ final class AppSettings {
         self.mainCurrency = mainCurrency
         self.language = language
         self.budgetStartDay = budgetStartDay
+        self.currencyChosen = currencyChosen
         self.notifyBudgetAlerts = notifyBudgetAlerts
         self.notifyGoalReminders = notifyGoalReminders
         self.notifyRecurringPosted = notifyRecurringPosted

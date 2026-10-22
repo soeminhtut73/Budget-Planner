@@ -14,6 +14,7 @@ struct AddEditBudgetView: View {
     var editingBudget: Budget?
 
     @Environment(\.modelContext) private var context
+    @Environment(\.money) private var money
     @Environment(\.dismiss) private var dismiss
 
     @Query(filter: #Predicate<Category> { $0.deletedAt == nil && $0.isArchived == false }, sort: \Category.sortOrder)
@@ -61,7 +62,7 @@ struct AddEditBudgetView: View {
                     Text("A budget is a spending limit, not money. Expenses still come out of your wallets.")
                         .font(.footnote).foregroundStyle(Theme.secondaryText)
                         .multilineTextAlignment(.center)
-                    NumberPad(allowsDecimal: CurrencyRounding.minorUnits(for: currencyCode) > 0) { handleKey($0) }
+                    NumberPad(allowsDecimal: money.minorUnits > 0) { handleKey($0) }
                 }
                 .padding()
             }
@@ -112,14 +113,14 @@ struct AddEditBudgetView: View {
 
     private var limitSection: some View {
         VStack(spacing: 2) {
-            Text("Monthly limit · \(currencyCode)").font(.footnote).foregroundStyle(Theme.secondaryText)
-            AmountText(amount: amount.value, style: .neutral, currencyCode: currencyCode,
+            Text("Monthly limit · \(money.currencyCode)").font(.footnote).foregroundStyle(Theme.secondaryText)
+            AmountText(amount: amount.value, style: .neutral,
                        tint: amount.value == 0 ? Theme.secondaryText : nil)
                 .font(.system(size: 40, weight: .bold))
             if let category = selectedCategory {
                 let avg = recentMonthlyAverage(categoryID: category.id)
                 if avg > 0 {
-                    Text("You spent about \(avg.formatted(.currency(code: currencyCode)))/month recently")
+                    Text("You spent about \(money.string(avg))/month recently")
                         .font(.footnote).foregroundStyle(Theme.secondaryText)
                 }
             }
@@ -145,14 +146,14 @@ struct AddEditBudgetView: View {
             HStack {
                 Text("Already spent").foregroundStyle(Theme.secondaryText)
                 Spacer()
-                Text("\(spent.formatted(.currency(code: currencyCode))) of \(newLimit.formatted(.currency(code: currencyCode)))")
+                Text("\(money.string(spent)) of \(money.string(newLimit))")
                     .fontWeight(.semibold).foregroundStyle(Theme.text)
             }
             ProgressBar(fraction: BudgetService.fraction(spent: spent, limit: newLimit))
             HStack {
                 Text("All budgets").foregroundStyle(Theme.secondaryText)
                 Spacer()
-                Text("\(oldTotal.formatted(.currency(code: currencyCode))) → \(newTotal.formatted(.currency(code: currencyCode)))")
+                Text("\(money.string(oldTotal)) → \(money.string(newTotal))")
                     .foregroundStyle(Theme.text)
             }
             HStack {
@@ -175,10 +176,10 @@ struct AddEditBudgetView: View {
         if let editingBudget {
             selectedCategory = editingBudget.category
             let limit = BudgetService.limit(from: editingBudget.limits ?? [], periodStart: period.start) ?? 0
-            amount = AmountInput.from(limit, minorUnits: CurrencyRounding.minorUnits(for: currencyCode))
+            amount = AmountInput.from(limit, minorUnits: money.minorUnits)
             alertAt80 = editingBudget.alertAt80
         } else {
-            amount = AmountInput(minorUnits: CurrencyRounding.minorUnits(for: currencyCode))
+            amount = AmountInput(minorUnits: money.minorUnits)
         }
     }
 
