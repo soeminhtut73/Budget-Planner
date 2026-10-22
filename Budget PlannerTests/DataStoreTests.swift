@@ -342,4 +342,75 @@ struct DataStoreTests {
         try repo.archive(budget)
         #expect(try repo.activeBudgets().isEmpty)
     }
+
+    @Test("Deleting a budget frees its category")
+    func deleteBudgetFreesCategory() throws {
+        let container = try seededContainer()
+        let context = container.mainContext
+        let repo = SwiftDataBudgetRepository(context: context)
+        let food = try #require(try SwiftDataCategoryRepository(context: context).activeCategories(kind: .expense).first)
+        let budget = try repo.createBudget(category: food, limit: 300, effectiveFrom: .now, alertAt80: true)
+        #expect(try repo.budget(forCategoryID: food.id)?.id == budget.id)
+
+        try repo.delete(budget)
+        #expect(try repo.budget(forCategoryID: food.id) == nil)
+        #expect(try repo.activeBudgets().isEmpty)
+    }
+
+    // MARK: Goals
+
+    @Test("Deposit and withdraw adjust the goal's saved amount")
+    func goalDepositWithdraw() throws {
+        let container = try seededContainer()
+        let context = container.mainContext
+        let service = GoalService(context: context)
+        let wallet = try #require(try SwiftDataWalletRepository(context: context).activeWallets().first)
+
+        let goal = try service.createGoal(name: "Trip", iconName: "airplane", target: 1000, targetDate: nil,
+                                          reminder: false, startingAmount: 0, sourceWallet: nil)
+        _ = try service.deposit(goal, amount: 100, wallet: wallet)
+        try service.withdraw(goal, amount: 30, wallet: wallet)
+        #expect(GoalMath.saved(for: goal) == dec("70"))
+    }
+
+    @Test("A deposit that reaches the target reports completion and marks the goal")
+    func goalCompletion() throws {
+        let container = try seededContainer()
+        let context = container.mainContext
+        let service = GoalService(context: context)
+        let wallet = try #require(try SwiftDataWalletRepository(context: context).activeWallets().first)
+
+        let goal = try service.createGoal(name: "Phone", iconName: "target", target: 100, targetDate: nil,
+                                          reminder: false, startingAmount: 0, sourceWallet: nil)
+        let completed = try service.deposit(goal, amount: 100, wallet: wallet)
+        #expect(completed)
+        #expect(goal.status == .completed)
+    }
+
+    @Test("Spend from goal reduces the goal and the wallet, and is excluded from its budget")
+    func spendFromGoal() throws {
+        let container = try seededContainer()
+        let context = container.mainContext
+        let goalService = GoalService(context: context)
+        let txService = TransactionService(context: context)
+        let wallet = try #require(try SwiftDataWalletRepository(context: context).activeWallets().first)
+        let food = try #require(try SwiftDataCategoryRepository(context: context).activeCategories(kind: .expense).first)
+        wallet.openingBalance = 500
+
+        let goal = try goalService.createGoal(name: "Trip", iconName: "airplane", target: 300, targetDate: nil,
+                                              reminder: false, startingAmount: 150, sourceWallet: wallet)
+        try txService.create(kind: .expense, amount: 100, category: food, wallet: wallet,
+                             occurredAt: .now, note: nil, paidFromGoal: goal, currencyCode: "USD")
+
+        // Goal drops by 100 (150 deposit − 100 spend).
+        #expect(GoalMath.saved(for: goal) == dec("50"))
+
+        let allTx = try SwiftDataTransactionRepository(context: context).allTransactions()
+        // Wallet (Total) drops by 100.
+        #expect(BalanceService.walletBalance(wallet, transactions: allTx) == dec("400"))
+
+        // The goal-paid expense is excluded from the category budget.
+        let period = PeriodCalculator.period(for: .now, startDay: 1, timeZoneID: TimeZone.current.identifier)
+        #expect(BudgetService.spent(categoryID: food.id, period: period, transactions: allTx) == dec("0"))
+    }
 }

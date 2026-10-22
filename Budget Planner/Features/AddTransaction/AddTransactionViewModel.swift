@@ -33,6 +33,8 @@ final class AddTransactionViewModel {
     var occurredAt: Date
     var note: String = ""
     var repeatMonthly: Bool = false
+    /// Set when an expense is paid from a goal.
+    var paidFromGoal: Goal?
 
     // Fixed context
     let currencyCode: String
@@ -46,6 +48,8 @@ final class AddTransactionViewModel {
     private(set) var expenseCategories: [Category] = []
     private(set) var incomeCategories: [Category] = []
     private(set) var wallets: [Wallet] = []
+    /// Goals that can fund an expense (not archived).
+    private(set) var goals: [Goal] = []
 
     init(context: ModelContext, editing: Transaction? = nil, presetCategoryID: UUID? = nil) {
         self.context = context
@@ -61,9 +65,11 @@ final class AddTransactionViewModel {
         let expense = (try? categoryRepo.activeCategories(kind: .expense)) ?? []
         let income = (try? categoryRepo.activeCategories(kind: .income)) ?? []
         let allWallets = (try? walletRepo.activeWallets()) ?? []
+        let goalList = ((try? SwiftDataGoalRepository(context: context).allGoals()) ?? []).filter { $0.status != .archived }
         self.expenseCategories = expense
         self.incomeCategories = income
         self.wallets = allWallets
+        self.goals = goalList
 
         if let tx = editing {
             self.mode = .edit(tx)
@@ -74,6 +80,7 @@ final class AddTransactionViewModel {
             self.occurredAt = tx.occurredAt
             self.note = tx.note ?? ""
             self.repeatMonthly = tx.recurringRule != nil
+            self.paidFromGoal = tx.paidFromGoal
         } else {
             self.mode = .create
             self.amountInput = AmountInput(minorUnits: minorUnits)
@@ -137,6 +144,7 @@ final class AddTransactionViewModel {
             category = categoriesForKind.first
         }
         if newKind == .expense { repeatMonthly = false }
+        if newKind == .income { paidFromGoal = nil }
     }
 
     private func categoryKind(for kind: TransactionKind) -> CategoryKind {
@@ -191,6 +199,7 @@ final class AddTransactionViewModel {
                 wallet: wallet,
                 occurredAt: occurredAt,
                 note: note,
+                paidFromGoal: kind == .expense ? paidFromGoal : nil,
                 repeatMonthly: kind == .income && repeatMonthly,
                 currencyCode: currencyCode
             )

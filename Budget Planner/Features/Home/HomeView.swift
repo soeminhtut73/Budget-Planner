@@ -35,7 +35,7 @@ struct HomeView: View {
         PeriodCalculator.period(for: .now, startDay: budgetStartDay, timeZoneID: TimeZone.current.identifier)
     }
     private var total: Decimal { BalanceService.totalBalance(wallets: wallets, transactions: transactions) }
-    private var reserved: Decimal { BalanceService.reserved(goals: goals.filter { $0.status == .active }) }
+    private var reserved: Decimal { BalanceService.reserved(goals: goals.filter { $0.status != .archived }) }
     private var available: Decimal { total - reserved }
     private var periodTotals: (income: Decimal, expense: Decimal) {
         HomeMetrics.periodTotals(transactions: transactions, period: period)

@@ -66,4 +66,35 @@ struct GoalMathTests {
     func emptyGoal() {
         #expect(GoalMath.saved(for: Goal(name: "Empty")) == dec("0"))
     }
+
+    @Test("Progress and completion")
+    func progressAndCompletion() {
+        #expect(GoalMath.progress(saved: dec("50"), target: dec("200")) == 0.25)
+        #expect(!GoalMath.isComplete(saved: dec("499"), target: dec("500")))
+        #expect(GoalMath.isComplete(saved: dec("500"), target: dec("500")))
+    }
+
+    @Test("Monthly needed divides the remainder over the months left")
+    func monthlyNeeded() {
+        let from = utcDate(year: 2026, month: 10, day: 1)
+        let targetDate = utcDate(year: 2027, month: 2, day: 1)   // 4 months out
+        let needed = GoalMath.monthlyNeeded(saved: dec("100"), target: dec("500"),
+                                            targetDate: targetDate, from: from, timeZoneID: "UTC")
+        #expect(needed == dec("100"))
+        // No target date → nil (don't show).
+        #expect(GoalMath.monthlyNeeded(saved: 0, target: 500, targetDate: nil) == nil)
+    }
+
+    @Test("On track when this period's deposits meet the monthly need")
+    func onTrack() {
+        let period = PeriodCalculator.period(for: utcDate(year: 2026, month: 10, day: 15), startDay: 1, timeZoneID: "UTC")
+        let goal = Goal(name: "Trip")
+        goal.entries = [
+            GoalEntry(kind: .deposit, amount: dec("120"), occurredAt: utcDate(year: 2026, month: 10, day: 5), timeZoneID: "UTC", goal: goal),
+        ]
+        let deposits = GoalMath.depositsInPeriod(entries: goal.entries ?? [], period: period)
+        #expect(deposits == dec("120"))
+        #expect(GoalMath.isOnTrack(depositsThisPeriod: deposits, monthlyNeeded: dec("100")))
+        #expect(!GoalMath.isOnTrack(depositsThisPeriod: deposits, monthlyNeeded: dec("150")))
+    }
 }

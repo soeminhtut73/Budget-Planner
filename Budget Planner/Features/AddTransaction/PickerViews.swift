@@ -64,6 +64,38 @@ struct CategoryPickerView: View {
     }
 }
 
+struct GoalPickerView: View {
+    let goals: [Goal]
+    @Binding var selection: Goal?
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List(goals) { goal in
+                Button {
+                    selection = goal
+                    dismiss()
+                } label: {
+                    HStack {
+                        CategoryIcon(systemName: goal.iconName, size: 32)
+                        Text(goal.name).foregroundStyle(Theme.text)
+                        Spacer()
+                        if selection?.id == goal.id {
+                            Image(systemName: "checkmark").foregroundStyle(Theme.primary)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Pay from goal")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
+        }
+    }
+}
+
 struct WalletPickerView: View {
     let wallets: [Wallet]
     @Binding var selection: Wallet?

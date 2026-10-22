@@ -48,6 +48,15 @@ struct TransactionService {
         )
         context.insert(transaction)
 
+        // Paying an expense from a goal also draws the goal down (reduces its
+        // saved amount): reduces Total and the goal, Available unchanged.
+        if let goal = paidFromGoal, kind == .expense {
+            let spend = GoalEntry(kind: .spend, amount: amount, occurredAt: occurredAt,
+                                  timeZoneID: timeZoneID, goal: goal, wallet: wallet)
+            context.insert(spend)
+            goal.entries = (goal.entries ?? []) + [spend]
+        }
+
         if kind == .income, repeatMonthly {
             let dayOfMonth = Calendar.current.component(.day, from: occurredAt)
             let rule = RecurringRule(

@@ -15,6 +15,7 @@ struct AddTransactionView: View {
     @State private var savedSummary: TransactionService.SavedSummary?
     @State private var showCategoryPicker = false
     @State private var showWalletPicker = false
+    @State private var showGoalPicker = false
     @State private var showDeleteConfirmation = false
 
     @Environment(\.dismiss) private var dismiss
@@ -68,6 +69,9 @@ struct AddTransactionView: View {
             }
             .sheet(isPresented: $showWalletPicker) {
                 WalletPickerView(wallets: model.wallets, selection: $model.wallet)
+            }
+            .sheet(isPresented: $showGoalPicker) {
+                GoalPickerView(goals: model.goals, selection: $model.paidFromGoal)
             }
             .confirmationDialog("Delete this transaction?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
                 Button("Delete", role: .destructive) { deleteTransaction() }
@@ -149,28 +153,40 @@ struct AddTransactionView: View {
     }
 
     private var paidFromRow: some View {
-        HStack(spacing: 8) {
-            Text("Paid from").foregroundStyle(Theme.secondaryText)
-            Spacer()
-            Text("Wallet")
-                .font(.subheadline.weight(.medium))
-                .padding(.horizontal, 12).frame(height: 32)
-                .background(Theme.primary, in: Capsule())
-                .foregroundStyle(.white)
-            Text("Goal")
-                .font(.subheadline)
-                .padding(.horizontal, 12).frame(height: 32)
-                .background(Theme.surface, in: Capsule())
-                .overlay(Capsule().stroke(Theme.border))
-                .foregroundStyle(Theme.secondaryText)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text("Paid from").foregroundStyle(Theme.secondaryText)
+                Spacer()
+                Button { model.paidFromGoal = nil } label: {
+                    paidFromPill(text: Text("Wallet"), selected: model.paidFromGoal == nil)
+                }
+                .buttonStyle(.plain)
+                Button {
+                    if !model.goals.isEmpty { showGoalPicker = true }
+                } label: {
+                    paidFromPill(text: Text(model.paidFromGoal?.name ?? String(localized: "Goal")),
+                                 selected: model.paidFromGoal != nil)
+                }
+                .buttonStyle(.plain)
+                .disabled(model.goals.isEmpty)
+            }
+            if model.goals.isEmpty {
+                Text("Add a savings goal to pay from it").font(.caption2).foregroundStyle(Theme.secondaryText)
+            } else if model.paidFromGoal != nil {
+                Text("Reduces Total and the goal; excluded from budgets")
+                    .font(.caption2).foregroundStyle(Theme.secondaryText)
+            }
         }
-        .overlay(alignment: .bottomTrailing) {
-            Text("Available when Goals are added")
-                .font(.caption2)
-                .foregroundStyle(Theme.secondaryText)
-                .offset(y: 16)
-        }
-        .padding(.bottom, 8)
+        .padding(.bottom, 4)
+    }
+
+    private func paidFromPill(text: Text, selected: Bool) -> some View {
+        text
+            .font(.subheadline.weight(.medium))
+            .padding(.horizontal, 12).frame(height: 32)
+            .foregroundStyle(selected ? Color.white : Theme.secondaryText)
+            .background(selected ? Theme.primary : Theme.surface, in: Capsule())
+            .overlay(Capsule().stroke(selected ? Color.clear : Theme.border))
     }
 
     // MARK: Income

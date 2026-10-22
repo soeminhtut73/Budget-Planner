@@ -28,8 +28,7 @@ struct PlanView: View {
                 if segment == .budgets {
                     BudgetsListView()
                 } else {
-                    ComingSoonView(title: "Savings goals", systemImage: "target")
-                        .frame(maxHeight: .infinity)
+                    GoalsListView()
                 }
                 Spacer(minLength: 0)
             }

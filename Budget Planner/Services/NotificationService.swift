@@ -32,4 +32,32 @@ enum NotificationService {
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         try? await center.add(request)
     }
+
+    /// Schedules a repeating monthly reminder for a savings goal (1st, 10:00).
+    /// A calendar trigger fires without background refresh.
+    static func scheduleGoalReminder(goalID: UUID, name: String) async {
+        await requestAuthorization()
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+        guard settings.authorizationStatus == .authorized
+                || settings.authorizationStatus == .provisional else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "Savings reminder")
+        content.body = String(localized: "Time to add to \(name).")
+        content.sound = .default
+
+        var date = DateComponents()
+        date.day = 1
+        date.hour = 10
+        let trigger = UNCalendarNotificationTrigger(dateMatching: date, repeats: true)
+        let request = UNNotificationRequest(identifier: reminderID(goalID), content: content, trigger: trigger)
+        try? await center.add(request)
+    }
+
+    static func cancelGoalReminder(goalID: UUID) {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [reminderID(goalID)])
+    }
+
+    private static func reminderID(_ goalID: UUID) -> String { "goal-\(goalID.uuidString)" }
 }
