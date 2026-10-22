@@ -32,7 +32,7 @@ struct MainTabView: View {
                 PlanView()
                     .tabItem { Label("Plan", systemImage: "chart.pie.fill") }
                     .tag(Tab.plan)
-                ReportsPlaceholderView()
+                ReportsView()
                     .tabItem { Label("Reports", systemImage: "chart.bar.fill") }
                     .tag(Tab.reports)
             }
