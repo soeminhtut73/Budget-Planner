@@ -37,6 +37,7 @@ final class AddTransactionViewModel {
     // Fixed context
     let currencyCode: String
     let minorUnits: Int
+    let budgetStartDay: Int
     let mode: Mode
 
     private let context: ModelContext
@@ -46,19 +47,23 @@ final class AddTransactionViewModel {
     private(set) var incomeCategories: [Category] = []
     private(set) var wallets: [Wallet] = []
 
-    init(context: ModelContext, editing: Transaction? = nil) {
+    init(context: ModelContext, editing: Transaction? = nil, presetCategoryID: UUID? = nil) {
         self.context = context
 
         let settings = try? SwiftDataAppSettingsRepository(context: context).ensureDefault()
         let code = settings?.mainCurrency ?? "USD"
         self.currencyCode = code
         self.minorUnits = CurrencyRounding.minorUnits(for: code)
+        self.budgetStartDay = settings?.budgetStartDay ?? 1
 
         let categoryRepo = SwiftDataCategoryRepository(context: context)
         let walletRepo = SwiftDataWalletRepository(context: context)
-        self.expenseCategories = (try? categoryRepo.activeCategories(kind: .expense)) ?? []
-        self.incomeCategories = (try? categoryRepo.activeCategories(kind: .income)) ?? []
-        self.wallets = (try? walletRepo.activeWallets()) ?? []
+        let expense = (try? categoryRepo.activeCategories(kind: .expense)) ?? []
+        let income = (try? categoryRepo.activeCategories(kind: .income)) ?? []
+        let allWallets = (try? walletRepo.activeWallets()) ?? []
+        self.expenseCategories = expense
+        self.incomeCategories = income
+        self.wallets = allWallets
 
         if let tx = editing {
             self.mode = .edit(tx)
@@ -71,11 +76,17 @@ final class AddTransactionViewModel {
             self.repeatMonthly = tx.recurringRule != nil
         } else {
             self.mode = .create
-            self.kind = .expense
             self.amountInput = AmountInput(minorUnits: minorUnits)
             self.occurredAt = .now
-            self.category = expenseCategories.first
-            self.wallet = wallets.first
+            self.wallet = allWallets.first
+            if let presetCategoryID,
+               let preset = (expense + income).first(where: { $0.id == presetCategoryID }) {
+                self.kind = preset.kind == .income ? .income : .expense
+                self.category = preset
+            } else {
+                self.kind = .expense
+                self.category = expense.first
+            }
         }
     }
 
@@ -173,7 +184,7 @@ final class AddTransactionViewModel {
         let service = TransactionService(context: context)
         switch mode {
         case .create:
-            return try service.create(
+            let summary = try service.create(
                 kind: kind,
                 amount: amount,
                 category: category,
@@ -183,6 +194,10 @@ final class AddTransactionViewModel {
                 repeatMonthly: kind == .income && repeatMonthly,
                 currencyCode: currencyCode
             )
+            if kind == .expense {
+                scheduleBudgetAlertIfNeeded(category: category, addedAmount: amount, occurredAt: occurredAt)
+            }
+            return summary
         case .edit(let tx):
             return try service.update(
                 tx,
@@ -200,6 +215,39 @@ final class AddTransactionViewModel {
     func delete() throws {
         if case .edit(let tx) = mode {
             try TransactionService(context: context).delete(tx)
+        }
+    }
+
+    /// Fires a local notification if this expense crossed 80% or 100% of its
+    /// category budget for the expense's period. The view model decides to
+    /// notify; the budget math is in BudgetService.
+    private func scheduleBudgetAlertIfNeeded(category: Category, addedAmount: Decimal, occurredAt: Date) {
+        let budgetRepo = SwiftDataBudgetRepository(context: context)
+        guard let budget = try? budgetRepo.budget(forCategoryID: category.id) else { return }
+
+        let tzID = TimeZone.current.identifier
+        let period = PeriodCalculator.period(for: occurredAt, startDay: budgetStartDay, timeZoneID: tzID)
+        guard period.contains(occurredAt) else { return }
+
+        let allTx = (try? SwiftDataTransactionRepository(context: context).allTransactions()) ?? []
+        let newSpent = BudgetService.spent(categoryID: category.id, period: period, transactions: allTx)
+        let priorSpent = newSpent - addedAmount
+        let limit = BudgetService.limit(from: budget.limits ?? [], periodStart: period.start) ?? 0
+        guard limit > 0 else { return }
+
+        let name = category.displayName
+        let code = currencyCode
+
+        if BudgetService.crossedThreshold(1.0, priorSpent: priorSpent, newSpent: newSpent, limit: limit) {
+            let title = String(localized: "Budget reached")
+            let body = String(localized: "You've reached your \(name) budget.")
+            Task { await NotificationService.fire(title: title, body: body) }
+        } else if budget.alertAt80,
+                  BudgetService.crossedThreshold(0.8, priorSpent: priorSpent, newSpent: newSpent, limit: limit) {
+            let remaining = BudgetService.remaining(limit: limit, spent: newSpent)
+            let title = String(localized: "Budget alert")
+            let body = String(localized: "You've used over 80% of your \(name) budget — \(remaining.formatted(.currency(code: code))) left.")
+            Task { await NotificationService.fire(title: title, body: body) }
         }
     }
 

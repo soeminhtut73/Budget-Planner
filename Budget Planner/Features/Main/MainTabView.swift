@@ -29,7 +29,7 @@ struct MainTabView: View {
                 ActivityView(context: context, requestedWalletID: $activityWalletID)
                     .tabItem { Label("Activity", systemImage: "list.bullet") }
                     .tag(Tab.activity)
-                PlanPlaceholderView()
+                PlanView()
                     .tabItem { Label("Plan", systemImage: "chart.pie.fill") }
                     .tag(Tab.plan)
                 ReportsPlaceholderView()

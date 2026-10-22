@@ -23,6 +23,8 @@ struct HomeView: View {
     private var wallets: [Wallet]
     @Query(filter: #Predicate<Goal> { $0.deletedAt == nil })
     private var goals: [Goal]
+    @Query(filter: #Predicate<Budget> { $0.deletedAt == nil && $0.isArchived == false })
+    private var budgets: [Budget]
     @Query private var settingsList: [AppSettings]
 
     private var settings: AppSettings? { settingsList.first }
@@ -50,7 +52,7 @@ struct HomeView: View {
                     mascotRow
                     balanceCard
                     incomeExpenseRow
-                    BudgetAlertCard()
+                    if let alert = alertBudget { budgetAlertCard(alert.budget, alert.stats) }
                     recentActivityCard
                 }
                 .padding(.horizontal)
@@ -184,6 +186,45 @@ struct HomeView: View {
         period.start.formatted(.dateTime.month(.abbreviated))
     }
 
+    // MARK: Budget alert
+
+    /// The budget most worth surfacing: the highest usage that is at least 80%.
+    private var alertBudget: (budget: Budget, stats: BudgetStats)? {
+        budgets
+            .map { ($0, BudgetService.stats(for: $0, period: period, transactions: transactions)) }
+            .filter { $0.1.isOver80 }
+            .max { $0.1.fraction < $1.1.fraction }
+            .map { (budget: $0.0, stats: $0.1) }
+    }
+
+    private func budgetAlertCard(_ budget: Budget, _ stats: BudgetStats) -> some View {
+        let daysLeft = BudgetService.daysLeft(period: period, asOf: .now, timeZoneID: TimeZone.current.identifier)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("BUDGET ALERT").font(.caption.weight(.semibold)).foregroundStyle(Theme.secondaryText)
+                Spacer()
+                Text("\(Int((stats.fraction * 100).rounded()))% used")
+                    .font(.caption2.weight(.semibold))
+                    .padding(.horizontal, 8).padding(.vertical, 2)
+                    .foregroundStyle(stats.isOver100 ? Theme.expense : Theme.warning)
+                    .overlay(Capsule().stroke(stats.isOver100 ? Theme.expense : Theme.warning))
+            }
+            HStack {
+                if let category = budget.category {
+                    CategoryLabel(category: category).font(.headline).foregroundStyle(Theme.text)
+                }
+                Spacer()
+                Text("\(stats.remaining.formatted(.currency(code: currencyCode))) left · \(daysLeft) days")
+                    .font(.footnote).foregroundStyle(Theme.secondaryText)
+            }
+            ProgressBar(fraction: stats.fraction, color: stats.isOver100 ? Theme.expense : Theme.warning)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.border, lineWidth: 1))
+    }
+
     // MARK: Recent activity
 
     private var recentActivityCard: some View {
@@ -207,38 +248,6 @@ struct HomeView: View {
                     if index < recent.count - 1 { Divider() }
                 }
             }
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.border, lineWidth: 1))
-    }
-}
-
-/// Placeholder for the budget-alert slot. Shows sample data until the Budgets
-/// milestone; clearly tagged so it isn't mistaken for a live budget.
-private struct BudgetAlertCard: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("BUDGET ALERT").font(.caption.weight(.semibold)).foregroundStyle(Theme.secondaryText)
-                Spacer()
-                Text("Preview").font(.caption2).foregroundStyle(Theme.secondaryText)
-                    .padding(.horizontal, 8).padding(.vertical, 2)
-                    .overlay(Capsule().stroke(Theme.border))
-            }
-            HStack {
-                Text("Food").font(.headline).foregroundStyle(Theme.text)
-                Spacer()
-                Text("Arrives with Budgets").font(.footnote).foregroundStyle(Theme.secondaryText)
-            }
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Theme.border.opacity(0.5))
-                    Capsule().fill(Theme.warning).frame(width: geo.size.width * 0.86)
-                }
-            }
-            .frame(height: 6)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)

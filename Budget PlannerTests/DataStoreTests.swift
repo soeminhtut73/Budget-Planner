@@ -312,4 +312,34 @@ struct DataStoreTests {
         #expect(model.sections.first?.net == 70)
         #expect(model.sections.last?.net == -10)
     }
+
+    // MARK: Budget repository
+
+    @Test("Create budget, look it up, and keep limit history")
+    func budgetCrudAndHistory() throws {
+        let container = try seededContainer()
+        let context = container.mainContext
+        let repo = SwiftDataBudgetRepository(context: context)
+        let food = try #require(try SwiftDataCategoryRepository(context: context).activeCategories(kind: .expense).first)
+
+        let octStart = utcDate(year: 2026, month: 10, day: 1)
+        let budget = try repo.createBudget(category: food, limit: 400, effectiveFrom: octStart, alertAt80: true)
+        #expect(try repo.budget(forCategoryID: food.id)?.id == budget.id)
+        #expect((budget.limits ?? []).count == 1)
+
+        // New limit for a later period keeps the old one (history).
+        let decStart = utcDate(year: 2026, month: 12, day: 1)
+        try repo.setLimit(budget, amount: 500, effectiveFrom: decStart)
+        #expect((budget.limits ?? []).count == 2)
+        #expect(BudgetService.limit(from: budget.limits ?? [], periodStart: octStart) == 400)
+        #expect(BudgetService.limit(from: budget.limits ?? [], periodStart: decStart) == 500)
+
+        // Editing the same period updates in place (no new history entry).
+        try repo.setLimit(budget, amount: 450, effectiveFrom: octStart)
+        #expect((budget.limits ?? []).count == 2)
+        #expect(BudgetService.limit(from: budget.limits ?? [], periodStart: octStart) == 450)
+
+        try repo.archive(budget)
+        #expect(try repo.activeBudgets().isEmpty)
+    }
 }

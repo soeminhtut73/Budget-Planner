@@ -60,6 +60,20 @@ protocol AppSettingsRepository {
     func save() throws
 }
 
+protocol BudgetRepository {
+    /// Non-deleted, non-archived budgets.
+    func activeBudgets() throws -> [Budget]
+    func budget(forCategoryID id: UUID) throws -> Budget?
+    /// Creates a budget for a category with its first limit.
+    @discardableResult
+    func createBudget(category: Category, limit: Decimal, effectiveFrom: Date, alertAt80: Bool) throws -> Budget
+    /// Sets the limit for the given period start: updates an existing limit with
+    /// that `effectiveFrom`, otherwise appends a new one (preserving history).
+    func setLimit(_ budget: Budget, amount: Decimal, effectiveFrom: Date) throws
+    func archive(_ budget: Budget) throws
+    func save() throws
+}
+
 protocol GoalRepository {
     /// Non-deleted goals that are not archived.
     func activeGoals() throws -> [Goal]

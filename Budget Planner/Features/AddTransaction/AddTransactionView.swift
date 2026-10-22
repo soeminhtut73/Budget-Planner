@@ -19,8 +19,8 @@ struct AddTransactionView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    init(context: ModelContext, editing: Transaction? = nil) {
-        _model = State(initialValue: AddTransactionViewModel(context: context, editing: editing))
+    init(context: ModelContext, editing: Transaction? = nil, presetCategoryID: UUID? = nil) {
+        _model = State(initialValue: AddTransactionViewModel(context: context, editing: editing, presetCategoryID: presetCategoryID))
     }
 
     private var dayBinding: Binding<Date> {

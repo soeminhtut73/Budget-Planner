@@ -171,6 +171,56 @@ struct SwiftDataAppSettingsRepository: AppSettingsRepository {
     func save() throws { try context.save() }
 }
 
+struct SwiftDataBudgetRepository: BudgetRepository {
+    let context: ModelContext
+
+    func activeBudgets() throws -> [Budget] {
+        let descriptor = FetchDescriptor<Budget>(
+            predicate: #Predicate { $0.deletedAt == nil && $0.isArchived == false },
+            sortBy: [SortDescriptor(\.createdAt)]
+        )
+        return try context.fetch(descriptor)
+    }
+
+    func budget(forCategoryID id: UUID) throws -> Budget? {
+        try activeBudgets().first { $0.category?.id == id }
+    }
+
+    @discardableResult
+    func createBudget(category: Category, limit: Decimal, effectiveFrom: Date, alertAt80: Bool) throws -> Budget {
+        let budget = Budget(alertAt80: alertAt80, category: category)
+        context.insert(budget)
+        let budgetLimit = BudgetLimit(amount: limit, effectiveFrom: effectiveFrom, budget: budget)
+        context.insert(budgetLimit)
+        budget.limits = [budgetLimit]
+        try context.save()
+        return budget
+    }
+
+    func setLimit(_ budget: Budget, amount: Decimal, effectiveFrom: Date) throws {
+        if let existing = (budget.limits ?? []).first(where: {
+            $0.deletedAt == nil && Calendar.current.isDate($0.effectiveFrom, inSameDayAs: effectiveFrom)
+        }) {
+            existing.amount = amount
+            existing.updatedAt = .now
+        } else {
+            let newLimit = BudgetLimit(amount: amount, effectiveFrom: effectiveFrom, budget: budget)
+            context.insert(newLimit)
+            budget.limits = (budget.limits ?? []) + [newLimit]
+        }
+        budget.updatedAt = .now
+        try context.save()
+    }
+
+    func archive(_ budget: Budget) throws {
+        budget.isArchived = true
+        budget.updatedAt = .now
+        try context.save()
+    }
+
+    func save() throws { try context.save() }
+}
+
 struct SwiftDataGoalRepository: GoalRepository {
     let context: ModelContext
 

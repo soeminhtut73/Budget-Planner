@@ -16,8 +16,8 @@ struct ActivityView: View {
     @State private var pendingDelete: Transaction?
     @Binding var requestedWalletID: UUID?
 
-    init(context: ModelContext, requestedWalletID: Binding<UUID?>) {
-        _model = State(initialValue: ActivityViewModel(context: context, initialWalletID: requestedWalletID.wrappedValue))
+    init(context: ModelContext, requestedWalletID: Binding<UUID?> = .constant(nil), initialCategoryID: UUID? = nil) {
+        _model = State(initialValue: ActivityViewModel(context: context, initialWalletID: requestedWalletID.wrappedValue, initialCategoryID: initialCategoryID))
         _requestedWalletID = requestedWalletID
     }
 
