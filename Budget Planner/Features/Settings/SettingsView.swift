@@ -14,8 +14,11 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var context
     @Query private var settingsList: [AppSettings]
     @State private var showCurrency = false
+    @State private var showLanguage = false
 
     private var currencyCode: String { settingsList.first?.mainCurrency ?? "USD" }
+    private var languageCode: String { settingsList.first?.language ?? "en" }
+    private var startDay: Int { settingsList.first?.budgetStartDay ?? 1 }
 
     var body: some View {
         NavigationStack {
@@ -30,8 +33,24 @@ struct SettingsView: View {
                             Text(currencyCode).foregroundStyle(Theme.secondaryText)
                         }
                     }
-                    placeholderRow("Language", systemImage: "character.bubble")
-                    placeholderRow("Budget month starts", systemImage: "calendar")
+                    Button {
+                        showLanguage = true
+                    } label: {
+                        HStack {
+                            Label("Language", systemImage: "character.bubble").foregroundStyle(Theme.text)
+                            Spacer()
+                            Text(AppLanguages.name(for: languageCode)).foregroundStyle(Theme.secondaryText)
+                        }
+                    }
+                    NavigationLink {
+                        BudgetStartDayView()
+                    } label: {
+                        HStack {
+                            Label("Budget month starts", systemImage: "calendar")
+                            Spacer()
+                            Text(BudgetStartDay.ordinal(startDay)).foregroundStyle(Theme.secondaryText)
+                        }
+                    }
                 }
                 Section("Your money") {
                     NavigationLink {
@@ -42,9 +61,17 @@ struct SettingsView: View {
                     placeholderRow("Categories", systemImage: "square.grid.2x2")
                 }
                 Section("App") {
-                    placeholderRow("Notifications", systemImage: "bell")
+                    NavigationLink {
+                        NotificationsView()
+                    } label: {
+                        Label("Notifications", systemImage: "bell")
+                    }
                     placeholderRow("Face ID lock", systemImage: "faceid")
-                    placeholderRow("Export data", systemImage: "square.and.arrow.up")
+                    NavigationLink {
+                        ExportView()
+                    } label: {
+                        Label("Export data", systemImage: "square.and.arrow.up")
+                    }
                 }
 
                 #if DEBUG
@@ -78,7 +105,22 @@ struct SettingsView: View {
             } message: {
                 Text("Existing amounts won't be converted. Only the currency label changes.")
             }
+            .confirmationDialog("Change language", isPresented: $showLanguage, titleVisibility: .visible) {
+                ForEach(AppLanguages.supported, id: \.code) { lang in
+                    if lang.code != languageCode {
+                        Button(lang.name) { changeLanguage(to: lang.code) }
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            }
         }
+    }
+
+    private func changeLanguage(to code: String) {
+        guard let settings = settingsList.first else { return }
+        settings.language = code
+        settings.updatedAt = .now
+        try? context.save()
     }
 
     private func changeCurrency(to code: String) {

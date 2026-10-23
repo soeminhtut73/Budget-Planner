@@ -20,7 +20,7 @@ extension Category {
     var displayName: String {
         if let defaultKey {
             let key = "category.\(defaultKey)"
-            let localized = NSLocalizedString(key, comment: "default category name")
+            let localized = Localization.string(key)
             if localized != key { return localized }
             // Fallback: "other_income" → "Other income", "bills" → "Bills".
             return defaultKey.replacingOccurrences(of: "_", with: " ").capitalized
