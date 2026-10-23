@@ -61,7 +61,7 @@ struct ReportsView: View {
                         .accessibilityLabel("Export")
                 }
             }
-            .sheet(isPresented: $showExport) { exportPlaceholder }
+            .sheet(isPresented: $showExport) { ExportView() }
         }
     }
 
@@ -163,21 +163,6 @@ struct ReportsView: View {
         Text("No data for this period")
             .foregroundStyle(Theme.secondaryText)
             .frame(maxWidth: .infinity).frame(height: 120)
-    }
-
-    private var exportPlaceholder: some View {
-        NavigationStack {
-            VStack(spacing: 12) {
-                Image(systemName: "square.and.arrow.up").font(.system(size: 40)).foregroundStyle(Theme.primary)
-                Text("Export is coming soon").font(.headline).foregroundStyle(Theme.text)
-                Text("CSV and a full JSON backup arrive in the next update.")
-                    .font(.subheadline).foregroundStyle(Theme.secondaryText).multilineTextAlignment(.center)
-            }
-            .padding()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Theme.background)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showExport = false } } }
-        }
     }
 
     private func label(for start: Date) -> String {
