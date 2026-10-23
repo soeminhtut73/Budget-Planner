@@ -117,6 +117,8 @@ struct AddEditBudgetView: View {
             AmountText(amount: amount.value, style: .neutral,
                        tint: amount.value == 0 ? Theme.secondaryText : nil)
                 .font(.system(size: 40, weight: .bold))
+                .contentTransition(.numericText())
+                .animation(.snappy, value: amount.value)
             if let category = selectedCategory {
                 let avg = recentMonthlyAverage(categoryID: category.id)
                 if avg > 0 {

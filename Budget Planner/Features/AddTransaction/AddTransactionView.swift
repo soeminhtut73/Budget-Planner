@@ -17,6 +17,9 @@ struct AddTransactionView: View {
     @State private var showWalletPicker = false
     @State private var showGoalPicker = false
     @State private var showDeleteConfirmation = false
+    /// Focus for the Note text field. While it's focused we hide the custom
+    /// amount keypad so the system keyboard (and the field) are visible.
+    @FocusState private var noteFocused: Bool
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.money) private var money
@@ -112,11 +115,23 @@ struct AddTransactionView: View {
                 }
                 .padding(.horizontal)
             }
+            // Swipe/scroll the form down to dismiss the note keyboard.
+            .scrollDismissesKeyboard(.interactively)
 
-            NumberPad(allowsDecimal: model.minorUnits > 0) { model.handleKey($0) }
-                .padding(.horizontal)
-                .padding(.bottom, 8)
+            // Hide the amount keypad while editing the Note, so the system
+            // keyboard can show and the note field scrolls into view.
+            if !noteFocused {
+                NumberPad(allowsDecimal: model.minorUnits > 0) { model.handleKey($0) }
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
+        .animation(.snappy, value: noteFocused)
+        // Tap any empty area (not a chip, row, or the field itself) to dismiss
+        // the note keyboard; child controls still receive their own taps.
+        .contentShape(Rectangle())
+        .onTapGesture { noteFocused = false }
     }
 
     private var amountDisplay: some View {
@@ -139,16 +154,56 @@ struct AddTransactionView: View {
 
     private var expenseFields: some View {
         VStack(spacing: 16) {
+            expenseCategoryPicker
+            walletPicker
             fieldCard {
-                pickerRow(title: "Category", value: categoryValueText) { showCategoryPicker = true }
-                Divider()
-                pickerRow(title: "Wallet", value: model.wallet?.name ?? "—") { showWalletPicker = true }
-                Divider()
                 dateRow
                 Divider()
                 noteRow
             }
             paidFromRow
+        }
+    }
+
+    /// Compact inline category chooser: a single horizontal row of chips (icon +
+    /// name), tap to select (no pop-up). The "+ New" chip opens the add sheet.
+    private var expenseCategoryPicker: some View {
+        chipRow(title: "CATEGORY") {
+            ForEach(model.categoriesForKind) { category in
+                Chip(isSelected: model.category?.id == category.id) {
+                    model.category = category
+                } label: {
+                    Label { CategoryLabel(category: category) } icon: { Image(systemName: category.iconName) }
+                }
+            }
+            Chip(isSelected: false) { showCategoryPicker = true } label: {
+                Label("New", systemImage: "plus")
+            }
+        }
+    }
+
+    /// Inline wallet chooser: a horizontal row of chips (icon + name), tap to
+    /// select. Avoids opening a separate wallet screen.
+    private var walletPicker: some View {
+        chipRow(title: "WALLET") {
+            ForEach(model.wallets) { wallet in
+                Chip(isSelected: model.wallet?.id == wallet.id) {
+                    model.wallet = wallet
+                } label: {
+                    Label { Text(wallet.name) } icon: { Image(systemName: wallet.iconName) }
+                }
+            }
+        }
+    }
+
+    /// A titled, horizontally scrolling row of chips.
+    private func chipRow<Content: View>(title: LocalizedStringKey, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.caption).foregroundStyle(Theme.secondaryText)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) { content() }
+                    .padding(.vertical, 2)
+            }
         }
     }
 
@@ -288,11 +343,10 @@ struct AddTransactionView: View {
             TextField("Optional", text: $model.note)
                 .multilineTextAlignment(.trailing)
                 .foregroundStyle(Theme.text)
+                .focused($noteFocused)
+                .submitLabel(.done)
+                .onSubmit { noteFocused = false }
         }
-    }
-
-    private var categoryValueText: String {
-        model.category?.displayName ?? "—"
     }
 
     // MARK: Actions

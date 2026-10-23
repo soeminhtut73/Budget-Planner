@@ -27,16 +27,21 @@ struct NewEditGoalView: View {
 
     @State private var name = ""
     @State private var iconName = "target"
-    @State private var target: Decimal = 0
+    // Amounts are held as text so the field shows a real "0" placeholder (not a
+    // literal 0 the user must delete first); the Decimal is parsed on demand.
+    @State private var targetText = ""
     @State private var hasTargetDate = false
     @State private var targetDate = Calendar.current.date(byAdding: .month, value: 4, to: .now) ?? .now
     @State private var reminder = false
-    @State private var startingAmount: Decimal = 0
+    @State private var startText = ""
     @State private var sourceWallet: Wallet?
     @State private var didConfigure = false
 
     private let icons = ["target", "airplane", "house.fill", "car.fill", "gift.fill",
                          "graduationcap.fill", "heart.fill", "gamecontroller.fill"]
+
+    private var target: Decimal { Self.parseAmount(targetText) }
+    private var startingAmount: Decimal { Self.parseAmount(startText) }
 
     private var isEditing: Bool { editingGoal != nil }
     private var canSave: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty && target > 0 }
@@ -95,6 +100,10 @@ struct NewEditGoalView: View {
                     .buttonStyle(.plain)
                 }
             }
+            // Pad inside the scroll content so the 2pt selection ring (drawn at
+            // the icon's frame edge) isn't clipped on the top/bottom/left edges.
+            .padding(.vertical, 4)
+            .padding(.horizontal, 2)
         }
     }
 
@@ -103,7 +112,7 @@ struct NewEditGoalView: View {
             HStack {
                 Text("Target amount").foregroundStyle(Theme.secondaryText)
                 Spacer()
-                TextField("0", value: $target, format: money.currencyStyle)
+                TextField("0", text: $targetText)
                     .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
                     .fontWeight(.semibold).foregroundStyle(Theme.text)
             }
@@ -126,7 +135,7 @@ struct NewEditGoalView: View {
             HStack {
                 Text("Amount").foregroundStyle(Theme.secondaryText)
                 Spacer()
-                TextField("0", value: $startingAmount, format: money.currencyStyle)
+                TextField("0", text: $startText)
                     .keyboardType(.decimalPad).multilineTextAlignment(.trailing)
                     .fontWeight(.semibold).foregroundStyle(Theme.text)
             }
@@ -183,10 +192,23 @@ struct NewEditGoalView: View {
         if let goal = editingGoal {
             name = goal.name
             iconName = goal.iconName
-            target = goal.targetAmount
+            targetText = Self.plainString(goal.targetAmount)
             if let date = goal.targetDate { hasTargetDate = true; targetDate = date }
             reminder = goal.reminderEnabled
         }
+    }
+
+    /// Parses a user-typed amount, tolerating the locale's decimal separator.
+    private static func parseAmount(_ text: String) -> Decimal {
+        let separator = Locale.current.decimalSeparator ?? "."
+        let normalized = text.replacingOccurrences(of: separator, with: ".")
+        let filtered = normalized.filter { $0.isNumber || $0 == "." }
+        return Decimal(string: filtered) ?? 0
+    }
+
+    /// Plain editable string for an existing amount (empty when zero).
+    private static func plainString(_ value: Decimal) -> String {
+        value > 0 ? NSDecimalNumber(decimal: value).stringValue : ""
     }
 
     private func save() {
