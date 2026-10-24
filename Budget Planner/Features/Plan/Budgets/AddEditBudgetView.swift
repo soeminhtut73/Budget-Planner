@@ -16,7 +16,6 @@ struct AddEditBudgetView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.money) private var money
     @Environment(\.dismiss) private var dismiss
-    @Environment(MascotController.self) private var mascot
 
     @Query(filter: #Predicate<Category> { $0.deletedAt == nil && $0.isArchived == false }, sort: \Category.sortOrder)
     private var categories: [Category]
@@ -217,17 +216,9 @@ struct AddEditBudgetView: View {
                 try repo.createBudget(category: category, limit: amount.value, effectiveFrom: period.start, alertAt80: alertAt80)
             }
             Task { await NotificationService.requestAuthorization() }
-            refreshOverLimit()
             dismiss()
         } catch {
             assertionFailure("Save budget failed: \(error)")
         }
-    }
-
-    /// Updates the mascot's base mood after creating/editing a budget, since a
-    /// new or changed limit can put a category over (or back under) its limit.
-    private func refreshOverLimit() {
-        let freshBudgets = (try? SwiftDataBudgetRepository(context: context).activeBudgets()) ?? budgets
-        mascot.setOverLimit(BudgetService.anyBudgetOverLimit(budgets: freshBudgets, period: period, transactions: transactions))
     }
 }

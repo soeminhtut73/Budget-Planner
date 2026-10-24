@@ -34,35 +34,37 @@ struct SavedConfirmationView: View {
     }
 
     private var card: some View {
-        VStack(spacing: 16) {
-            MascotView(controller: mascot, size: 88)
+        VStack(spacing: 24) {
+            MascotView(controller: mascot, size: 132)
 
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 Text("Logged")
-                    .font(.title3.weight(.bold))
+                    .font(.title.weight(.bold))
                     .foregroundStyle(Theme.text)
                 AmountText(amount: summary.amount, kind: summary.kind)
-                    .font(.title3.weight(.bold))
+                    .font(.title.weight(.bold))
             }
 
             Text("\(summary.categoryName) · \(summary.walletName)")
-                .font(.subheadline)
+                .font(.body)
                 .foregroundStyle(Theme.secondaryText)
 
             Button(action: onAddAnother) {
                 Text("Add another")
                     .fontWeight(.semibold)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 50)
+                    .frame(height: 56)
                     .foregroundStyle(Theme.text)
-                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.border, lineWidth: 1))
+                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.border, lineWidth: 1))
             }
             .buttonStyle(.plain)
         }
-        .padding(24)
+        .padding(.horizontal, 28)
+        .padding(.top, 44)
+        .padding(.bottom, 32)
         .frame(maxWidth: .infinity)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
         .padding(.horizontal, 8)
         .padding(.bottom, 8)
     }

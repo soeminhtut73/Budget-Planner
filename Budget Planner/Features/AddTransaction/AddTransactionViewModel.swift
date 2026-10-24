@@ -210,10 +210,10 @@ final class AddTransactionViewModel {
             )
             if kind == .expense {
                 scheduleBudgetAlertIfNeeded(category: category, addedAmount: amount, occurredAt: occurredAt)
-                refreshOverLimit()
             }
             // Reaction after a successful save only (never on failure/cancel).
             mascot?.play(kind == .income ? .cashIn : .cashOut)
+            refreshMascotMood()
             return summary
         case .edit(let tx):
             let summary = try service.update(
@@ -225,7 +225,7 @@ final class AddTransactionViewModel {
                 occurredAt: occurredAt,
                 note: note
             )
-            refreshOverLimit()
+            refreshMascotMood()
             return summary
         }
     }
@@ -233,19 +233,18 @@ final class AddTransactionViewModel {
     func delete() throws {
         if case .edit(let tx) = mode {
             try TransactionService(context: context).delete(tx)
-            refreshOverLimit()
+            refreshMascotMood()
         }
     }
 
-    /// Recomputes whether any budget is over its limit this period and updates
-    /// the mascot's base mood. Called after every change that affects spending.
-    private func refreshOverLimit() {
+    /// Updates the mascot's base mood from the main (total) balance — sad when
+    /// it goes negative. Called after every change that affects the balance.
+    private func refreshMascotMood() {
         guard let mascot else { return }
-        let tzID = TimeZone.current.identifier
-        let period = PeriodCalculator.period(for: .now, startDay: budgetStartDay, timeZoneID: tzID)
-        let budgets = (try? SwiftDataBudgetRepository(context: context).activeBudgets()) ?? []
+        let wallets = (try? SwiftDataWalletRepository(context: context).activeWallets()) ?? []
         let txs = (try? SwiftDataTransactionRepository(context: context).allTransactions()) ?? []
-        mascot.setOverLimit(BudgetService.anyBudgetOverLimit(budgets: budgets, period: period, transactions: txs))
+        let total = BalanceService.totalBalance(wallets: wallets, transactions: txs)
+        mascot.setOverLimit(total < 0)
     }
 
     /// Fires a local notification if this expense crossed 80% or 100% of its

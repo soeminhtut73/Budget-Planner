@@ -12,7 +12,6 @@ import SwiftData
 struct BudgetsListView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.money) private var money
-    @Environment(MascotController.self) private var mascot
 
     @Query(filter: #Predicate<Budget> { $0.deletedAt == nil && $0.isArchived == false }, sort: \Budget.createdAt)
     private var budgets: [Budget]
@@ -20,7 +19,6 @@ struct BudgetsListView: View {
     private var transactions: [Transaction]
     @Query private var settingsList: [AppSettings]
 
-    @State private var showAdd = false
     @State private var editingBudget: Budget?
     @State private var pendingDelete: Budget?
 
@@ -51,15 +49,11 @@ struct BudgetsListView: View {
                     budgetRows
                     outsideLine
                 }
-                addButton
             }
             .padding(.bottom, 96)
         }
         .navigationDestination(for: Budget.self) { budget in
             BudgetDetailView(budget: budget)
-        }
-        .sheet(isPresented: $showAdd) {
-            AddEditBudgetView()
         }
         .sheet(item: $editingBudget) { budget in
             AddEditBudgetView(editingBudget: budget)
@@ -72,8 +66,6 @@ struct BudgetsListView: View {
             Button("Delete budget", role: .destructive) {
                 if let budget = pendingDelete {
                     try? SwiftDataBudgetRepository(context: context).delete(budget)
-                    let fresh = (try? SwiftDataBudgetRepository(context: context).activeBudgets()) ?? []
-                    mascot.setOverLimit(BudgetService.anyBudgetOverLimit(budgets: fresh, period: period, transactions: transactions))
                 }
                 pendingDelete = nil
             }
@@ -177,16 +169,6 @@ struct BudgetsListView: View {
         }
         .font(.subheadline)
         .padding(.horizontal, 4)
-    }
-
-    private var addButton: some View {
-        Button { showAdd = true } label: {
-            Label("Add budget", systemImage: "plus")
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity).frame(height: 50)
-                .foregroundStyle(Theme.primary)
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.primary, lineWidth: 1.5))
-        }
     }
 
     private var emptyState: some View {

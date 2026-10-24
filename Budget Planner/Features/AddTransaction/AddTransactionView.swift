@@ -17,6 +17,8 @@ struct AddTransactionView: View {
     @State private var showWalletPicker = false
     @State private var showGoalPicker = false
     @State private var showDeleteConfirmation = false
+    /// Category grid starts collapsed; the header toggles it.
+    @State private var categoryExpanded = false
     /// Focus for the Note text field. While it's focused we hide the custom
     /// amount keypad so the system keyboard (and the field) are visible.
     @FocusState private var noteFocused: Bool
@@ -167,21 +169,92 @@ struct AddTransactionView: View {
         }
     }
 
-    /// Compact inline category chooser: a single horizontal row of chips (icon +
-    /// name), tap to select (no pop-up). The "+ New" chip opens the add sheet.
+    /// Category chooser: one horizontal line of tiles by default; the chevron
+    /// expands them into a full grid. Picking a category collapses back to one
+    /// line. The "New" tile opens the add-category sheet.
     private var expenseCategoryPicker: some View {
-        chipRow(title: "CATEGORY") {
-            ForEach(model.categoriesForKind) { category in
-                Chip(isSelected: model.category?.id == category.id) {
-                    model.category = category
-                } label: {
-                    Label { CategoryLabel(category: category) } icon: { Image(systemName: category.iconName) }
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.snappy) { categoryExpanded.toggle() }
+            } label: {
+                HStack(spacing: 6) {
+                    Text("CATEGORY").font(.caption).foregroundStyle(Theme.secondaryText)
+                    Spacer()
+                    if let category = model.category {
+                        Image(systemName: category.iconName).font(.caption)
+                        Text(category.displayName).font(.caption.weight(.semibold)).lineLimit(1)
+                    }
+                    Image(systemName: categoryExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption.weight(.semibold))
+                }
+                .foregroundStyle(Theme.primary)
+            }
+            .buttonStyle(.plain)
+
+            if categoryExpanded {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: 10)], alignment: .leading, spacing: 10) {
+                    ForEach(model.categoriesForKind) { category in
+                        categoryTile(for: category) {
+                            model.category = category
+                            withAnimation(.snappy) { categoryExpanded = false }
+                        }
+                    }
+                    newCategoryTile
+                }
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(model.categoriesForKind) { category in
+                                categoryTile(for: category) { model.category = category }
+                                    .frame(width: 84)
+                                    .id(category.id)
+                            }
+                            newCategoryTile.frame(width: 84)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                    .onAppear { scrollToSelected(proxy) }
+                    .onChange(of: model.category?.id) { _, _ in scrollToSelected(proxy) }
                 }
             }
-            Chip(isSelected: false) { showCategoryPicker = true } label: {
-                Label("New", systemImage: "plus")
-            }
         }
+    }
+
+    /// Centers the selected category tile in the collapsed one-line row.
+    private func scrollToSelected(_ proxy: ScrollViewProxy) {
+        guard let id = model.category?.id else { return }
+        withAnimation(.snappy) { proxy.scrollTo(id, anchor: .center) }
+    }
+
+    private func categoryTile(for category: Category, action: @escaping () -> Void) -> some View {
+        categoryTile(icon: category.iconName, label: Text(category.displayName),
+                     selected: model.category?.id == category.id, dashed: false, action: action)
+    }
+
+    private var newCategoryTile: some View {
+        categoryTile(icon: "plus", label: Text("New"), selected: false, dashed: true) {
+            showCategoryPicker = true
+        }
+    }
+
+    /// A small square category tile matching the Add budget page (icon badge +
+    /// label); fills its container so grid/row spacing stays even.
+    private func categoryTile(icon: String, label: Text, selected: Bool, dashed: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 3) {
+                CategoryIcon(systemName: icon, size: 22)
+                label
+                    .font(.caption2).lineLimit(1).minimumScaleFactor(0.8)
+                    .foregroundStyle(dashed ? Theme.secondaryText : Theme.text)
+            }
+            .frame(maxWidth: .infinity, minHeight: 64)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10)
+                .stroke(selected ? Theme.primary : Theme.border,
+                        style: StrokeStyle(lineWidth: selected ? 2 : 1, dash: dashed ? [4] : [])))
+        }
+        .buttonStyle(.plain)
     }
 
     /// Inline wallet chooser: a horizontal row of chips (icon + name), tap to

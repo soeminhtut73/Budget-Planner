@@ -20,44 +20,82 @@ enum BudgetStartDay {
     }
 }
 
-/// Picks the day of the month the budget period starts on (1–28).
+/// Picks the day of the month the budget period starts on (1–28). Shows a live
+/// example of the resulting date range, updating as the day is tapped.
 struct BudgetStartDayView: View {
     @Environment(\.modelContext) private var context
-    @Environment(\.dismiss) private var dismiss
     @Query private var settingsList: [AppSettings]
 
+    @State private var selectedDay = 1
+    @State private var didInit = false
+
     private var settings: AppSettings? { settingsList.first }
+    private var timeZoneID: String { TimeZone.current.identifier }
+
+    /// The current period's inclusive date range for the selected start day,
+    /// e.g. "25 Oct – 24 Nov".
+    private var exampleRange: String {
+        let period = PeriodCalculator.period(for: .now, startDay: selectedDay, timeZoneID: timeZoneID)
+        let calendar = PeriodCalculator.calendar(timeZoneID: timeZoneID)
+        let lastDay = calendar.date(byAdding: .day, value: -1, to: period.end) ?? period.end
+        let style = Date.FormatStyle.dateTime.day().month(.abbreviated)
+        return "\(period.start.formatted(style)) – \(lastDay.formatted(style))"
+    }
 
     var body: some View {
-        List {
-            Section {
-                ForEach(BudgetStartDay.range, id: \.self) { day in
-                    Button {
-                        setDay(day)
-                    } label: {
-                        HStack {
-                            Text(BudgetStartDay.ordinal(day)).foregroundStyle(Theme.text)
-                            Spacer()
-                            if settings?.budgetStartDay == day {
-                                Image(systemName: "checkmark").foregroundStyle(Theme.primary)
+        VStack(spacing: 0) {
+            exampleHeader
+            List {
+                Section {
+                    ForEach(BudgetStartDay.range, id: \.self) { day in
+                        Button {
+                            setDay(day)
+                        } label: {
+                            HStack {
+                                Text(BudgetStartDay.ordinal(day)).foregroundStyle(Theme.text)
+                                Spacer()
+                                if selectedDay == day {
+                                    Image(systemName: "checkmark").foregroundStyle(Theme.primary)
+                                }
                             }
                         }
                     }
+                } footer: {
+                    Text("Budgets run from this day to the day before it next month. Changing it takes effect right away.")
                 }
-            } footer: {
-                Text("Budgets run from this day to the day before it next month. Changing it takes effect right away.")
             }
         }
+        .background(Color(.systemGroupedBackground))
         .navigationTitle("Budget month starts")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if !didInit { selectedDay = settings?.budgetStartDay ?? 1; didInit = true }
+        }
+    }
+
+    /// Pinned example that stays visible while the day list scrolls.
+    private var exampleHeader: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("YOUR BUDGET MONTH").font(.caption).foregroundStyle(Theme.secondaryText)
+            Text(exampleRange).font(.headline).foregroundStyle(Theme.text)
+                .contentTransition(.numericText())
+                .animation(.snappy, value: selectedDay)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.border, lineWidth: 1))
+        .padding(.horizontal)
+        .padding(.top, 12)
+        .padding(.bottom, 4)
     }
 
     private func setDay(_ day: Int) {
+        selectedDay = day
         guard let settings else { return }
         settings.budgetStartDay = day
         settings.updatedAt = .now
         try? context.save()
-        dismiss()
     }
 }
 

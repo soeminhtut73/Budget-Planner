@@ -44,10 +44,9 @@ struct HomeView: View {
     }
     private var streak: Int { HomeMetrics.loggingStreak(transactions: transactions) }
     private var recent: [Transaction] { Array(transactions.prefix(5)) }
-    /// Whether any active budget is over its limit this period (drives the sad owl).
-    private var isOverLimit: Bool {
-        BudgetService.anyBudgetOverLimit(budgets: budgets, period: period, transactions: transactions)
-    }
+    /// The mascot's mood tracks the main (total) balance: sad when it goes
+    /// negative, happy otherwise.
+    private var balanceLow: Bool { total < 0 }
 
     var body: some View {
         ZStack {
@@ -66,10 +65,10 @@ struct HomeView: View {
             }
         }
         .sheet(isPresented: $showSettings) { SettingsView() }
-        // Keep the mascot's base mood (idle vs. sad) in sync with budget state,
-        // at launch and whenever budgets or transactions change.
-        .onAppear { mascot.setOverLimit(isOverLimit) }
-        .onChange(of: isOverLimit) { _, over in mascot.setOverLimit(over) }
+        // Keep the mascot's base mood (idle vs. sad) in sync with the main
+        // balance, at launch and whenever it changes.
+        .onAppear { mascot.setOverLimit(balanceLow) }
+        .onChange(of: balanceLow) { _, low in mascot.setOverLimit(low) }
     }
 
     // MARK: Header

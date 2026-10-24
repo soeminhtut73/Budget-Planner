@@ -24,6 +24,9 @@ struct BudgetDetailView: View {
     @State private var showEdit = false
     @State private var showAddExpense = false
     @State private var showDeleteConfirm = false
+    /// A local mascot for this page, driven by this budget's remaining limit —
+    /// separate from the app-wide (balance-driven) mascot on Home.
+    @State private var detailMascot = MascotController()
 
     private var settings: AppSettings? { settingsList.first }
     private var currencyCode: String { settings?.mainCurrency ?? "USD" }
@@ -56,7 +59,9 @@ struct BudgetDetailView: View {
             .padding(.bottom, 90)
         }
         .background(Theme.background)
-        .safeAreaInset(edge: .bottom) { addExpenseBar }
+        .onAppear { detailMascot.setOverLimit(stats.isOver100) }
+        .onChange(of: stats.isOver100) { _, over in detailMascot.setOverLimit(over) }
+        .overlay(alignment: .bottomTrailing) { addExpenseButton }
         .navigationTitle(budget.category?.displayName ?? "Budget")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -102,12 +107,12 @@ struct BudgetDetailView: View {
 
     private var summaryCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("\(money.string(stats.remaining)) left")
+            HStack(alignment: .center) {
+                Text(money.string(stats.remaining))
                     .font(.title.weight(.bold)).foregroundStyle(stats.isOver100 ? Theme.expense : Theme.text)
                 Spacer()
-                Text("\(money.string(stats.spent)) of \(money.string(stats.limit)) · \(Int((stats.fraction * 100).rounded()))%")
-                    .font(.subheadline).foregroundStyle(Theme.secondaryText)
+                // Mascot reflects this budget's remaining limit: sad when over.
+                MascotView(controller: detailMascot, size: 64)
             }
             ProgressBar(fraction: stats.fraction,
                         color: stats.isOver100 ? Theme.expense : (stats.isOver80 ? Theme.warning : Theme.primary))
@@ -161,16 +166,17 @@ struct BudgetDetailView: View {
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.border, lineWidth: 1))
     }
 
-    private var addExpenseBar: some View {
+    private var addExpenseButton: some View {
         Button { showAddExpense = true } label: {
-            Label("Add expense", systemImage: "plus")
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity).frame(height: 50)
+            Image(systemName: "plus")
+                .font(.title2.weight(.semibold))
                 .foregroundStyle(.white)
-                .background(Theme.primary, in: RoundedRectangle(cornerRadius: 14))
+                .frame(width: 60, height: 60)
+                .background(Theme.primary, in: Circle())
+                .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
         }
-        .padding(.horizontal)
-        .padding(.bottom, 8)
-        .background(.ultraThinMaterial)
+        .accessibilityLabel("Add expense")
+        .padding(.trailing, 20)
+        .padding(.bottom, 20)
     }
 }
