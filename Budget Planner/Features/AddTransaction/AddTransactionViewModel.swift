@@ -41,6 +41,10 @@ final class AddTransactionViewModel {
     let budgetStartDay: Int
     let mode: Mode
 
+    /// Injected by the view once the environment is available; the view model
+    /// drives mascot reactions (cashIn/cashOut) and the over-limit base mood.
+    var mascot: MascotController?
+
     var currencyCode: String { money.currencyCode }
     var minorUnits: Int { money.minorUnits }
 
@@ -206,10 +210,13 @@ final class AddTransactionViewModel {
             )
             if kind == .expense {
                 scheduleBudgetAlertIfNeeded(category: category, addedAmount: amount, occurredAt: occurredAt)
+                refreshOverLimit()
             }
+            // Reaction after a successful save only (never on failure/cancel).
+            mascot?.play(kind == .income ? .cashIn : .cashOut)
             return summary
         case .edit(let tx):
-            return try service.update(
+            let summary = try service.update(
                 tx,
                 kind: kind,
                 amount: amount,
@@ -218,13 +225,27 @@ final class AddTransactionViewModel {
                 occurredAt: occurredAt,
                 note: note
             )
+            refreshOverLimit()
+            return summary
         }
     }
 
     func delete() throws {
         if case .edit(let tx) = mode {
             try TransactionService(context: context).delete(tx)
+            refreshOverLimit()
         }
+    }
+
+    /// Recomputes whether any budget is over its limit this period and updates
+    /// the mascot's base mood. Called after every change that affects spending.
+    private func refreshOverLimit() {
+        guard let mascot else { return }
+        let tzID = TimeZone.current.identifier
+        let period = PeriodCalculator.period(for: .now, startDay: budgetStartDay, timeZoneID: tzID)
+        let budgets = (try? SwiftDataBudgetRepository(context: context).activeBudgets()) ?? []
+        let txs = (try? SwiftDataTransactionRepository(context: context).allTransactions()) ?? []
+        mascot.setOverLimit(BudgetService.anyBudgetOverLimit(budgets: budgets, period: period, transactions: txs))
     }
 
     /// Fires a local notification if this expense crossed 80% or 100% of its

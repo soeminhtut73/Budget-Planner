@@ -37,6 +37,15 @@ enum BudgetService {
         )
     }
 
+    /// Whether any active budget is at or over 100% of its limit this period.
+    /// Drives the mascot's `overLimit` (sad) base mood. Goal-paid expenses are
+    /// excluded from the spent total, just like in `stats`.
+    static func anyBudgetOverLimit(budgets: [Budget], period: BudgetPeriod, transactions: [Transaction]) -> Bool {
+        budgets.contains { budget in
+            stats(for: budget, period: period, transactions: transactions).isOver100
+        }
+    }
+
     /// Expenses for a category within a period, excluding goal-paid expenses.
     static func spent(categoryID: UUID, period: BudgetPeriod, transactions: [Transaction]) -> Decimal {
         transactions.reduce(Decimal(0)) { running, tx in

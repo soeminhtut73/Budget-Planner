@@ -13,6 +13,10 @@ import SwiftData
 struct RootGateView: View {
     @Query private var settingsList: [AppSettings]
 
+    /// One mascot controller for the whole app, injected into the environment.
+    /// View models drive it; HomeView keeps its over-limit base mood in sync.
+    @State private var mascot = MascotController()
+
     private var settings: AppSettings? { settingsList.first }
     private var currencyCode: String { settings?.mainCurrency ?? "USD" }
     private var languageCode: String { settings?.language ?? "en" }
@@ -26,6 +30,7 @@ struct RootGateView: View {
             }
         }
         .environment(\.money, MoneyFormatter(currencyCode: currencyCode))
+        .environment(mascot)
         // Apply the in-app language live: SwiftUI Text and formatting follow the
         // environment locale; Localization mirrors it for non-SwiftUI lookups.
         .environment(\.locale, Locale(identifier: languageCode))

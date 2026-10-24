@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		04F662D7308C853600839A51 /* RiveRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 04F662D6308C853600839A51 /* RiveRuntime */; };
 		1C5F6340FE82E19F0C49A2D0 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 35F4CD0D474A195F47C9BACD /* Foundation.framework */; };
 /* End PBXBuildFile section */
 
@@ -44,6 +45,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				04F662D7308C853600839A51 /* RiveRuntime in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -161,6 +163,9 @@
 			);
 			mainGroup = 04E8BA263089056F0057CF02;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				04F662D5308C853600839A51 /* XCRemoteSwiftPackageReference "rive-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 04E8BA303089056F0057CF02 /* Products */;
 			projectDirPath = "";
@@ -475,6 +480,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		04F662D5308C853600839A51 /* XCRemoteSwiftPackageReference "rive-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/rive-app/rive-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.28.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		04F662D6308C853600839A51 /* RiveRuntime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 04F662D5308C853600839A51 /* XCRemoteSwiftPackageReference "rive-ios" */;
+			productName = RiveRuntime;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 04E8BA273089056F0057CF02 /* Project object */;
 }

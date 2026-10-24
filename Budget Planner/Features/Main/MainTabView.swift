@@ -67,4 +67,5 @@ struct MainTabView: View {
 #Preview {
     MainTabView()
         .modelContainer(PreviewData.container())
+        .environment(MascotController())
 }

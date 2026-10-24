@@ -351,4 +351,5 @@ Each milestone: plan → approval → implement → tests pass → commit.
 - Goal completion shows `GoalCompletedView` with confetti and success haptic (no assets).
 - Icons are SF Symbols; buttons and motion are native SwiftUI; the app icon is the only custom asset.
 - Rive is the future path for a richer mascot; no Lottie, no GIFs.
+- Approved RiveRuntime (rive-ios) for the owl mascot; SwiftUI owl kept for Reduce Motion. (V1 shipped only the `MascotView` placeholder, so the full mascot system — `MascotController`, `MascotMood`, reactions, `MascotView(controller:)` — was built here with Rive as the renderer. No SwiftUI owl art was ever drawn; Reduce Motion shows a static Rive pose. All owl `.riv` input names live in `MascotRiveInputs`.)
 - Currency chosen at onboarding (MMK, VND, USD in V1, list extensible). Narrow symbol. Decimals follow the currency's standard (USD 2, MMK/VND 0), derived from the currency not a hardcoded switch. One `MoneyFormatter` (via `\.money`) formats all money; compact format only in wallet chips and chart labels. Changing currency relabels, doesn't convert existing amounts.

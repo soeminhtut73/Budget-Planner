@@ -20,6 +20,7 @@ struct AddToGoalSheet: View {
     @Environment(\.modelContext) private var context
     @Environment(\.money) private var money
     @Environment(\.dismiss) private var dismiss
+    @Environment(MascotController.self) private var mascot
 
     @Query(filter: #Predicate<Wallet> { $0.deletedAt == nil }, sort: \Wallet.sortOrder)
     private var wallets: [Wallet]
@@ -120,7 +121,9 @@ struct AddToGoalSheet: View {
             if mode == .deposit {
                 let completed = try service.deposit(goal, amount: amount.value, wallet: wallet)
                 dismiss()
-                if completed { onCompleted() }
+                // A completing deposit shows GoalCompletedView (which plays
+                // goalReached); a normal deposit plays the saving reaction.
+                if completed { onCompleted() } else { mascot.play(.saving) }
             } else {
                 try service.withdraw(goal, amount: amount.value, wallet: wallet)
                 dismiss()

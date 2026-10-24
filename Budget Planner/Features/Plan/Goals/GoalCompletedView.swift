@@ -14,6 +14,7 @@ struct GoalCompletedView: View {
     let onArchive: () -> Void
     let onKeepOpen: () -> Void
 
+    @Environment(MascotController.self) private var mascot
     @State private var appeared = false
 
     var body: some View {
@@ -22,13 +23,16 @@ struct GoalCompletedView: View {
             card
             ConfettiView().ignoresSafeArea()
         }
-        .onAppear { appeared = true }
+        .onAppear {
+            appeared = true
+            mascot.play(.goalReached)
+        }
         .sensoryFeedback(.success, trigger: appeared)
     }
 
     private var card: some View {
         VStack(spacing: 16) {
-            MascotView(size: 96)
+            MascotView(controller: mascot, size: 96)
             Text("Goal reached!")
                 .font(.title2.weight(.bold)).foregroundStyle(Theme.text)
             Text("You saved up for \(goalName). ")
@@ -58,4 +62,5 @@ struct GoalCompletedView: View {
 
 #Preview {
     GoalCompletedView(goalName: "Trip to Vietnam", onArchive: {}, onKeepOpen: {})
+        .environment(MascotController())
 }

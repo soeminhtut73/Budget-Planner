@@ -16,6 +16,7 @@ struct HomeView: View {
 
     @Environment(\.modelContext) private var context
     @Environment(\.money) private var money
+    @Environment(MascotController.self) private var mascot
     @State private var showSettings = false
 
     @Query(filter: #Predicate<Transaction> { $0.deletedAt == nil }, sort: \Transaction.occurredAt, order: .reverse)
@@ -43,6 +44,10 @@ struct HomeView: View {
     }
     private var streak: Int { HomeMetrics.loggingStreak(transactions: transactions) }
     private var recent: [Transaction] { Array(transactions.prefix(5)) }
+    /// Whether any active budget is over its limit this period (drives the sad owl).
+    private var isOverLimit: Bool {
+        BudgetService.anyBudgetOverLimit(budgets: budgets, period: period, transactions: transactions)
+    }
 
     var body: some View {
         ZStack {
@@ -61,6 +66,10 @@ struct HomeView: View {
             }
         }
         .sheet(isPresented: $showSettings) { SettingsView() }
+        // Keep the mascot's base mood (idle vs. sad) in sync with budget state,
+        // at launch and whenever budgets or transactions change.
+        .onAppear { mascot.setOverLimit(isOverLimit) }
+        .onChange(of: isOverLimit) { _, over in mascot.setOverLimit(over) }
     }
 
     // MARK: Header
@@ -86,7 +95,7 @@ struct HomeView: View {
 
     private var mascotRow: some View {
         HStack(spacing: 12) {
-            MascotView(size: 60)
+            MascotView(controller: mascot, size: 60)
             VStack(alignment: .leading, spacing: 2) {
                 if streak > 0 {
                     Text("\(streak)-day logging streak")
@@ -261,10 +270,12 @@ struct HomeView: View {
     HomeView()
         .modelContainer(PreviewData.container())
         .environment(\.money, MoneyFormatter(currencyCode: "USD"))
+        .environment(MascotController())
 }
 
 #Preview("MMK") {
     HomeView()
         .modelContainer(PreviewData.container())
         .environment(\.money, MoneyFormatter(currencyCode: "MMK"))
+        .environment(MascotController())
 }

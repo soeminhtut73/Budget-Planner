@@ -12,6 +12,7 @@ import SwiftData
 struct BudgetsListView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.money) private var money
+    @Environment(MascotController.self) private var mascot
 
     @Query(filter: #Predicate<Budget> { $0.deletedAt == nil && $0.isArchived == false }, sort: \Budget.createdAt)
     private var budgets: [Budget]
@@ -69,7 +70,11 @@ struct BudgetsListView: View {
             titleVisibility: .visible
         ) {
             Button("Delete budget", role: .destructive) {
-                if let budget = pendingDelete { try? SwiftDataBudgetRepository(context: context).delete(budget) }
+                if let budget = pendingDelete {
+                    try? SwiftDataBudgetRepository(context: context).delete(budget)
+                    let fresh = (try? SwiftDataBudgetRepository(context: context).activeBudgets()) ?? []
+                    mascot.setOverLimit(BudgetService.anyBudgetOverLimit(budgets: fresh, period: period, transactions: transactions))
+                }
                 pendingDelete = nil
             }
             Button("Cancel", role: .cancel) { pendingDelete = nil }

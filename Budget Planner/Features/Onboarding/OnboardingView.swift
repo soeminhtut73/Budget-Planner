@@ -36,7 +36,7 @@ struct OnboardingView: View {
             VStack(spacing: 24) {
                 Spacer()
                 VStack(spacing: 8) {
-                    MascotView(size: 88)
+                    MascotView(mood: .idle, size: 88)
                     Text("Which currency do you use?")
                         .font(.title.weight(.bold)).foregroundStyle(Theme.text)
                         .multilineTextAlignment(.center)

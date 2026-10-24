@@ -15,6 +15,7 @@ struct SavedConfirmationView: View {
     let onDismiss: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(MascotController.self) private var mascot
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -34,7 +35,7 @@ struct SavedConfirmationView: View {
 
     private var card: some View {
         VStack(spacing: 16) {
-            MascotView(size: 88)
+            MascotView(controller: mascot, size: 88)
 
             HStack(spacing: 6) {
                 Text("Logged")
@@ -73,4 +74,5 @@ struct SavedConfirmationView: View {
         onAddAnother: {},
         onDismiss: {}
     )
+    .environment(MascotController())
 }

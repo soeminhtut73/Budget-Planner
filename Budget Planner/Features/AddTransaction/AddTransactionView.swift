@@ -23,6 +23,7 @@ struct AddTransactionView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.money) private var money
+    @Environment(MascotController.self) private var mascot
 
     init(context: ModelContext, editing: Transaction? = nil, presetCategoryID: UUID? = nil) {
         _model = State(initialValue: AddTransactionViewModel(context: context, editing: editing, presetCategoryID: presetCategoryID))
@@ -81,6 +82,7 @@ struct AddTransactionView: View {
                 Button("Delete", role: .destructive) { deleteTransaction() }
                 Button("Cancel", role: .cancel) {}
             }
+            .onAppear { model.mascot = mascot }
         }
     }
 
@@ -377,4 +379,5 @@ struct AddTransactionView: View {
 
 #Preview {
     AddTransactionView(context: PreviewData.container(sampleCount: 20).mainContext)
+        .environment(MascotController())
 }
