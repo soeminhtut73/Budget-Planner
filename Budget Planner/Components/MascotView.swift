@@ -25,28 +25,49 @@ struct MascotView: View {
 
     private let content: Content
     var size: CGFloat
+    /// When true (Home only), tapping wakes the sleeping owl or plays `love`,
+    /// with a matching haptic. Decorative everywhere else, so default is false.
+    var isInteractive: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Bumped on wake / love so `.sensoryFeedback` fires the matching haptic.
+    @State private var wakeFeedback = 0
+    @State private var loveFeedback = 0
 
     init(size: CGFloat = 60) {
         self.content = .placeholder
         self.size = size
+        self.isInteractive = false
     }
 
     init(mood: MascotMood, size: CGFloat = 60) {
         self.content = .mood(mood)
         self.size = size
+        self.isInteractive = false
     }
 
-    init(controller: MascotController, size: CGFloat = 60) {
+    init(controller: MascotController, size: CGFloat = 60, isInteractive: Bool = false) {
         self.content = .live(controller)
         self.size = size
+        self.isInteractive = isInteractive
     }
 
     var body: some View {
         poseView
             .frame(width: size, height: size)
+            // Keep a tappable target of at least 44pt even for small sizes.
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
+            .modifier(MascotTapToPlay(controller: interactiveController,
+                                      wakeFeedback: $wakeFeedback,
+                                      loveFeedback: $loveFeedback))
             .accessibilityHidden(true)
+    }
+
+    /// The controller to drive taps against, or nil when not interactive.
+    private var interactiveController: MascotController? {
+        guard isInteractive, case .live(let controller) = content else { return nil }
+        return controller
     }
 
     @ViewBuilder private var poseView: some View {
@@ -56,9 +77,9 @@ struct MascotView: View {
         case .mood(let mood):
             StaticRiveMascotView(mood: mood)
         case .live(let controller):
-            // Respect Reduce Motion: no movement, just the static base pose.
+            // Respect Reduce Motion: no movement, just the static base/sleep pose.
             if reduceMotion {
-                StaticRiveMascotView(mood: controller.baseMood)
+                StaticRiveMascotView(mood: controller.baseMood, isSleeping: controller.isSleeping)
             } else {
                 RiveMascotView(controller: controller)
             }
@@ -73,6 +94,32 @@ struct MascotView: View {
                     .font(.system(size: size * 0.42, weight: .regular))
                     .foregroundStyle(Theme.primary.opacity(0.45))
             )
+    }
+}
+
+/// Adds the tap gesture + haptics when a controller is present; otherwise a
+/// no-op so the mascot stays purely decorative. File-scoped so its `body`'s
+/// `Content` resolves to `ViewModifier.Content`, not `MascotView.Content`.
+private struct MascotTapToPlay: ViewModifier {
+    let controller: MascotController?
+    @Binding var wakeFeedback: Int
+    @Binding var loveFeedback: Int
+
+    func body(content: Content) -> some View {
+        if let controller {
+            content
+                .onTapGesture {
+                    switch controller.handleTap() {
+                    case .wokeUp: wakeFeedback += 1
+                    case .love: loveFeedback += 1
+                    case .ignored: break
+                    }
+                }
+                .sensoryFeedback(.impact(weight: .light), trigger: wakeFeedback)
+                .sensoryFeedback(.impact(flexibility: .soft), trigger: loveFeedback)
+        } else {
+            content
+        }
     }
 }
 

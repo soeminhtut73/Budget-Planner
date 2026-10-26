@@ -96,6 +96,132 @@ struct MascotTests {
     }
 }
 
+@MainActor
+@Suite("Mascot sleep")
+struct MascotSleepTests {
+    private func utcCalendar() -> Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }
+
+    private func at(_ hour: Int, _ minute: Int = 0) -> Date {
+        var comps = DateComponents()
+        comps.year = 2026; comps.month = 10; comps.day = 26
+        comps.hour = hour; comps.minute = minute
+        return utcCalendar().date(from: comps)!
+    }
+
+    @Test("night hours sleep, day hours are awake")
+    func nightAndDay() {
+        func sleeping(at date: Date) -> Bool {
+            let c = MascotController(now: { date }, calendar: utcCalendar())
+            c.refresh()
+            return c.isSleeping
+        }
+        #expect(sleeping(at: at(22)))        // 22:00 → sleeping
+        #expect(sleeping(at: at(5, 59)))     // 05:59 → sleeping
+        #expect(!sleeping(at: at(6)))        // 06:00 → awake
+        #expect(!sleeping(at: at(20, 59)))   // 20:59 → awake
+    }
+
+    @Test("crossing 21:00 while open sleeps; crossing 06:00 wakes")
+    func crossings() {
+        var now = at(20, 59)
+        let c = MascotController(now: { now }, calendar: utcCalendar())
+        c.refresh(); #expect(!c.isSleeping)
+        now = at(21); c.refresh(); #expect(c.isSleeping)
+
+        var now2 = at(5, 59)
+        let c2 = MascotController(now: { now2 }, calendar: utcCalendar())
+        c2.refresh(); #expect(c2.isSleeping)
+        now2 = at(6); c2.refresh(); #expect(!c2.isSleeping)
+    }
+
+    @Test("tap while sleeping wakes and plays no love")
+    func tapWakes() {
+        let c = MascotController(now: { self.at(22) }, calendar: utcCalendar())
+        c.refresh(); #expect(c.isSleeping)
+        #expect(c.handleTap() == .wokeUp)
+        #expect(!c.isSleeping)
+        #expect(c.lastReaction == nil)
+    }
+
+    @Test("tap during the wake-up window is ignored")
+    func tapDuringWakeIgnored() {
+        var now = at(22)
+        let c = MascotController(now: { now }, calendar: utcCalendar())
+        c.refresh()
+        _ = c.handleTap()                       // wake at 22:00
+        now = at(22).addingTimeInterval(0.5)    // within the 1.6s window
+        #expect(c.handleTap() == .ignored)
+        #expect(c.lastReaction == nil)
+    }
+
+    @Test("tap while awake plays love; two taps give two reactions")
+    func tapPlaysLove() {
+        var now = at(12)
+        let c = MascotController(now: { now }, calendar: utcCalendar())
+        c.refresh(); #expect(!c.isSleeping)
+        #expect(c.handleTap() == .love)
+        #expect(c.lastReaction?.mood == .love)
+        let first = c.lastReaction
+        now = at(12).addingTimeInterval(1)
+        _ = c.handleTap()
+        #expect(c.lastReaction != first)        // restarted
+        #expect(c.lastReaction?.mood == .love)
+    }
+
+    @Test("after love, the base mood is unchanged")
+    func loveKeepsBaseMood() {
+        let c = MascotController(now: { self.at(12) }, calendar: utcCalendar())
+        c.refresh()
+        _ = c.handleTap()
+        #expect(c.baseMood == .idle)
+        c.setOverLimit(true)
+        _ = c.handleTap()
+        #expect(c.baseMood == .overLimit)
+    }
+
+    @Test("night awake dozes after 60s; activity resets the timer")
+    func dozeTimer() {
+        var now = at(22)
+        let c = MascotController(now: { now }, calendar: utcCalendar())
+        c.refresh()
+        _ = c.handleTap()                       // wake at 22:00
+        #expect(!c.isSleeping)
+        now = at(22).addingTimeInterval(60)
+        c.refresh()
+        #expect(c.isSleeping)                   // dozed off
+
+        var now2 = at(22)
+        let c2 = MascotController(now: { now2 }, calendar: utcCalendar())
+        c2.refresh()
+        _ = c2.handleTap()                      // wake at 22:00
+        now2 = at(22).addingTimeInterval(30)
+        c2.play(.cashIn)                        // activity resets the timer
+        now2 = at(22).addingTimeInterval(70)    // only 40s since the reset
+        c2.refresh()
+        #expect(!c2.isSleeping)                 // still awake
+    }
+
+    @Test("a reaction while sleeping keeps it sleeping")
+    func reactionWhileSleeping() {
+        let c = MascotController(now: { self.at(22) }, calendar: utcCalendar())
+        c.refresh(); #expect(c.isSleeping)
+        c.play(.cashIn)
+        #expect(c.isSleeping)
+        #expect(c.lastReaction?.mood == .cashIn)
+    }
+
+    @Test("love maps to its Rive trigger; sleeping boolean name")
+    func loveMapping() {
+        #expect(MascotRiveInputs.trigger(for: .love) == "love")
+        #expect(MascotRiveInputs.sleepingBool == "sleeping")
+        #expect(MascotMood.love.isReaction)
+    }
+}
+
 @Suite("Budget over-limit (mascot)")
 struct BudgetOverLimitTests {
     private let tz = "UTC"

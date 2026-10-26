@@ -9,6 +9,7 @@
 
 import SwiftUI
 import SwiftData
+import Combine
 
 struct HomeView: View {
     /// Switches to the Activity tab (optionally pre-filtered by wallet in Phase C).
@@ -17,7 +18,11 @@ struct HomeView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.money) private var money
     @Environment(MascotController.self) private var mascot
+    @Environment(\.scenePhase) private var scenePhase
+    /// Drives the owl's night/day + doze schedule while Home is open.
+    private let sleepTick = Timer.publish(every: 15, on: .main, in: .common).autoconnect()
     @State private var showSettings = false
+    @State private var showBalanceBreakdown = false
 
     @Query(filter: #Predicate<Transaction> { $0.deletedAt == nil }, sort: \Transaction.occurredAt, order: .reverse)
     private var transactions: [Transaction]
@@ -65,10 +70,17 @@ struct HomeView: View {
             }
         }
         .sheet(isPresented: $showSettings) { SettingsView() }
+        .sheet(isPresented: $showBalanceBreakdown) {
+            BalanceBreakdownView(total: total, goals: goals.filter { $0.status != .archived })
+        }
         // Keep the mascot's base mood (idle vs. sad) in sync with the main
         // balance, at launch and whenever it changes.
-        .onAppear { mascot.setOverLimit(balanceLow) }
+        .onAppear { mascot.setOverLimit(balanceLow); mascot.refresh() }
         .onChange(of: balanceLow) { _, low in mascot.setOverLimit(low) }
+        // Night/day sleep schedule: re-evaluate when the app becomes active and
+        // on a periodic tick (catches 21:00/06:00 crossings and the 60s doze).
+        .onChange(of: scenePhase) { _, phase in if phase == .active { mascot.refresh() } }
+        .onReceive(sleepTick) { _ in mascot.refresh() }
     }
 
     // MARK: Header
@@ -94,7 +106,7 @@ struct HomeView: View {
 
     private var mascotRow: some View {
         HStack(spacing: 12) {
-            MascotView(controller: mascot, size: 60)
+            MascotView(controller: mascot, size: 60, isInteractive: true)
             VStack(alignment: .leading, spacing: 2) {
                 if streak > 0 {
                     Text("\(streak)-day logging streak")
@@ -125,9 +137,17 @@ struct HomeView: View {
                 .font(.system(size: 40, weight: .bold))
                 .contentTransition(.numericText())
                 .animation(.snappy, value: total)
-            Text("Available \(money.string(available))")
-                .font(.subheadline)
+            Button { showBalanceBreakdown = true } label: {
+                HStack(spacing: 5) {
+                    Text("Available \(money.string(available))")
+                        .font(.subheadline)
+                    Image(systemName: "info.circle")
+                        .font(.footnote)
+                }
                 .foregroundStyle(.white.opacity(0.85))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Available balance details")
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {

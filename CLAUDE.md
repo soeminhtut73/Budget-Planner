@@ -194,16 +194,21 @@ A teal owl drawn entirely in SwiftUI shapes (no image assets, no dependencies). 
 | `cashOut` | Coin flies away, wing waves, shrug | Reaction ~1.8s | Expense saved |
 | `saving` | Jar appears, coin drops in, proud nod | Reaction ~2.2s | Goal deposit saved |
 | `goalReached` | Wings up, sparkles, 3 hops | Reaction ~2.8s | Goal saved ≥ target (in `GoalCompletedView`) |
+| `love` | Hearts, happy bounce | Reaction ~1.6s | Tapping the Home mascot while awake |
 | `overLimit` | Sad: droopy wings, sad brows, tears, sway | Base, loops | Any budget at or over 100% this period |
+| `sleep` | Eyes closed, gentle sway | Base, loops | Night (21:00–06:00 local), until tapped |
+| `wakeUp` | Stretch, eyes open (plays automatically when `sleeping` goes false) | Reaction ~1.6s | Tapping while asleep, or 06:00 |
 
 ### Rules
 - **One `MascotController`** (`@MainActor @Observable`) created at the app root and injected with `.environment`. Views use `MascotView(controller:)`; view models call:
   - `play(.cashIn | .cashOut | .saving | .goalReached)` after a successful save only (never on failure or cancel)
   - `setOverLimit(Bool)` after every budget recalculation (save, edit, delete, period change, app launch)
-- Reactions play once, then return to the base mood (`overLimit` if any budget is over, else `idle`). A new reaction cancels the current one.
+- **Night sleep (v1.1+):** the owl sleeps 21:00–06:00 local time (sleeping by default, even when over the limit). The controller takes an injected clock so the schedule is testable; the view drives it via `refresh()` on scene-active and a periodic tick. Only the **Home** mascot is interactive (`MascotView(controller:isInteractive: true)`); the confirmation card and goal-completed sheet stay non-interactive.
+- **Tapping the Home mascot:** while asleep it wakes (`sleeping = false` → Rive plays `wakeUp`) with a light impact haptic; while awake it plays `love` with a soft haptic. Taps during the ~1.6s wake-up are ignored; tapping again during `love` restarts it. At night an awake owl dozes back to sleep after 60s of no tap or reaction (any tap/reaction resets the timer). A reaction while asleep plays, then returns to sleep.
+- Reactions play once, then return to the base mood (`overLimit` if any budget is over, else `idle`; `sleep` if it's night and undisturbed). A new reaction cancels the current one.
 - Withdrawals and goal spending play no reaction in V1.
 - Mascot logic stays out of services: services return results (e.g. `didCompleteGoal`), view models decide which reaction to play.
-- **Respect Reduce Motion:** no movement, confetti or loops; show the static pose only.
+- **Respect Reduce Motion:** no movement, confetti or loops; show the static pose only (sleep pose while asleep, idle/sad when awake). A tap still wakes the owl (switches the frame) and gives the haptic; `love` gives the haptic only, no animation. Tapping is optional fun — never required for anything.
 - Mascot is decorative: `accessibilityHidden(true)`. Never put text inside it (app is bilingual); messages go in normal localized `Text`.
 - Mascot artwork colors live in `OwlColors` (same in light and dark mode). App UI colors still come from `Theme`.
 - Keep the `MascotView(mood:)` / `MascotView(controller:)` API stable so a Rive `.riv` file can replace the drawing later without changing call sites.
@@ -348,6 +353,7 @@ Each milestone: plan → approval → implement → tests pass → commit.
 - Deployment target is **iOS 18+** (raised from 17+).
 - Mascot: an **original character** (not an owl), drawn in pure SwiftUI, ships in **v1.1**. V1 uses a non-animated `MascotView` placeholder that reserves its final footprint; the 6 states (idle, cashIn, cashOut, saving, goalReached, overLimit) and `MascotController` move to v1.1. The `MascotView` API is kept stable so the character drops in without changing call sites.
 - Mascot moods are driven by one `MascotController`; reactions are one-shot, `idle` / `overLimit` are base moods.
+- Owl sleeps 21:00–06:00 local time; tap wakes it; tap when awake plays love; dozes off again after 60s at night.
 - Goal completion shows `GoalCompletedView` with confetti and success haptic (no assets).
 - Icons are SF Symbols; buttons and motion are native SwiftUI; the app icon is the only custom asset.
 - Rive is the future path for a richer mascot; no Lottie, no GIFs.

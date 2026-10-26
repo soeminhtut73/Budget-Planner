@@ -15,12 +15,13 @@ enum MascotMood: Equatable, Sendable {
     case cashOut
     case saving
     case goalReached
+    case love
     case overLimit
 
-    /// One-shot reactions (cashIn, cashOut, saving, goalReached).
+    /// One-shot reactions (cashIn, cashOut, saving, goalReached, love).
     var isReaction: Bool {
         switch self {
-        case .cashIn, .cashOut, .saving, .goalReached: return true
+        case .cashIn, .cashOut, .saving, .goalReached, .love: return true
         case .idle, .overLimit: return false
         }
     }

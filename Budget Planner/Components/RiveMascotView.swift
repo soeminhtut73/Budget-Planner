@@ -49,6 +49,12 @@ final class RiveOwlDriver {
     func setOverLimit(_ isOver: Bool) {
         viewModel.setInput(MascotRiveInputs.overLimitBool, value: isOver)
     }
+
+    /// Sets the sleeping boolean. The state machine plays `wakeUp` automatically
+    /// when this goes from true to false, and loops the sleep pose when true.
+    func setSleeping(_ isSleeping: Bool) {
+        viewModel.setInput(MascotRiveInputs.sleepingBool, value: isSleeping)
+    }
 }
 
 /// The animated mascot. Keeps its driver in @State so it survives re-renders.
@@ -60,10 +66,14 @@ struct RiveMascotView: View {
         driver.viewModel.view()
             .onAppear {
                 driver.setOverLimit(controller.baseMood == .overLimit)
+                driver.setSleeping(controller.isSleeping)
                 driver.playIfNew(controller.lastReaction)
             }
             .onChange(of: controller.baseMood) { _, mood in
                 driver.setOverLimit(mood == .overLimit)
+            }
+            .onChange(of: controller.isSleeping) { _, sleeping in
+                driver.setSleeping(sleeping)
             }
             .onChange(of: controller.lastReaction) { _, reaction in
                 driver.playIfNew(reaction)
@@ -75,13 +85,20 @@ struct RiveMascotView: View {
 /// The state machine is loaded but not auto-played; only the base pose shows.
 struct StaticRiveMascotView: View {
     let mood: MascotMood
+    var isSleeping: Bool = false
     @State private var driver = RiveOwlDriver(autoPlay: false)
 
     var body: some View {
         driver.viewModel.view()
-            .onAppear { driver.setOverLimit(mood == .overLimit) }
+            .onAppear {
+                driver.setOverLimit(mood == .overLimit)
+                driver.setSleeping(isSleeping)
+            }
             .onChange(of: mood) { _, newMood in
                 driver.setOverLimit(newMood == .overLimit)
+            }
+            .onChange(of: isSleeping) { _, sleeping in
+                driver.setSleeping(sleeping)
             }
     }
 }
