@@ -68,11 +68,11 @@ struct AddTransactionView: View {
                 }
             }
             .sheet(isPresented: $showCategoryPicker) {
-                CategoryPickerView(
-                    categories: model.categoriesForKind,
-                    selection: $model.category,
-                    onAddNew: { model.addCustomCategory(named: $0) }
-                )
+                // Same full create flow as Settings (name + icon), so there's
+                // one way to make a category. The new one is selected on return.
+                AddCategoryView(initialKind: model.kind == .income ? .income : .expense) { created in
+                    model.reloadCategories(select: created)
+                }
             }
             .sheet(isPresented: $showWalletPicker) {
                 WalletPickerView(wallets: model.wallets, selection: $model.wallet)
@@ -158,7 +158,7 @@ struct AddTransactionView: View {
 
     private var expenseFields: some View {
         VStack(spacing: 16) {
-            expenseCategoryPicker
+            categoryPicker(title: "CATEGORY")
             walletPicker
             fieldCard {
                 dateRow
@@ -169,16 +169,17 @@ struct AddTransactionView: View {
         }
     }
 
-    /// Category chooser: one horizontal line of tiles by default; the chevron
-    /// expands them into a full grid. Picking a category collapses back to one
-    /// line. The "New" tile opens the add-category sheet.
-    private var expenseCategoryPicker: some View {
+    /// Category/source chooser: one horizontal line of icon tiles by default;
+    /// the chevron expands them into a full grid. Picking one collapses back to
+    /// one line. The "New" tile opens the add-category sheet. Used for both the
+    /// expense "CATEGORY" and the income "SOURCE", so they look alike.
+    private func categoryPicker(title: LocalizedStringKey) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Button {
                 withAnimation(.snappy) { categoryExpanded.toggle() }
             } label: {
                 HStack(spacing: 6) {
-                    Text("CATEGORY").font(.caption).foregroundStyle(Theme.secondaryText)
+                    Text(title).font(.caption).foregroundStyle(Theme.secondaryText)
                     Spacer()
                     if let category = model.category {
                         Image(systemName: category.iconName).font(.caption)
@@ -243,7 +244,7 @@ struct AddTransactionView: View {
     private func categoryTile(icon: String, label: Text, selected: Bool, dashed: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 3) {
-                CategoryIcon(systemName: icon, size: 22)
+                CategoryIcon(systemName: icon, size: 28)
                 label
                     .font(.caption2).lineLimit(1).minimumScaleFactor(0.8)
                     .foregroundStyle(dashed ? Theme.secondaryText : Theme.text)
@@ -323,20 +324,7 @@ struct AddTransactionView: View {
 
     private var incomeFields: some View {
         VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("SOURCE")
-                    .font(.caption).foregroundStyle(Theme.secondaryText)
-                FlowLayout(spacing: 8) {
-                    ForEach(model.incomeCategories) { category in
-                        Chip(isSelected: model.category?.id == category.id) {
-                            model.category = category
-                        } label: {
-                            CategoryLabel(category: category)
-                        }
-                    }
-                    Chip("+ New", isSelected: false) { showCategoryPicker = true }
-                }
-            }
+            categoryPicker(title: "SOURCE")
 
             fieldCard {
                 pickerRow(title: "Into wallet", value: model.wallet?.name ?? "—") { showWalletPicker = true }

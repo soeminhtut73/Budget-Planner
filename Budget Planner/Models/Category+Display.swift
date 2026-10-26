@@ -27,4 +27,8 @@ extension Category {
         }
         return customName ?? ""
     }
+
+    /// A default (pre-seeded) category, identified by its `defaultKey`. Defaults
+    /// are protected: they can't be deleted from Category management.
+    var isDefault: Bool { defaultKey != nil }
 }

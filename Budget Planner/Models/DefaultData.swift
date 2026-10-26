@@ -37,7 +37,7 @@ enum DefaultData {
         .init(key: "allowance",    kind: .income, icon: "dollarsign.circle.fill"),
         .init(key: "freelance",    kind: .income, icon: "laptopcomputer"),
         .init(key: "gift",         kind: .income, icon: "gift.fill"),
-        .init(key: "other_income", kind: .income, icon: "plus.circle.fill"),
+        .init(key: "other_income", kind: .income, icon: "ellipsis.circle.fill"),
     ]
 
     static var allCategories: [DefaultCategoryDef] { expenseCategories + incomeCategories }

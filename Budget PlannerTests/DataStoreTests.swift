@@ -413,4 +413,47 @@ struct DataStoreTests {
         let period = PeriodCalculator.period(for: .now, startDay: 1, timeZoneID: TimeZone.current.identifier)
         #expect(BudgetService.spent(categoryID: food.id, period: period, transactions: allTx) == dec("0"))
     }
+
+    // MARK: Category management
+
+    @Test("createCustom adds a fetchable custom category")
+    func createCustomCategory() throws {
+        let container = try makeContainer()
+        let repo = SwiftDataCategoryRepository(context: container.mainContext)
+        let c = try repo.createCustom(kind: .expense, name: "  Coffee  ", iconName: "cup.and.saucer.fill")
+        #expect(c.defaultKey == nil)
+        #expect(c.customName == "Coffee")               // trimmed
+        #expect(c.iconName == "cup.and.saucer.fill")
+        #expect(try repo.activeCategories(kind: .expense).contains { $0.id == c.id })
+    }
+
+    @Test("Deleting a custom category soft-deletes it and its budget")
+    func deleteCustomWithBudget() throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        let catRepo = SwiftDataCategoryRepository(context: context)
+        let budgetRepo = SwiftDataBudgetRepository(context: context)
+
+        let c = try catRepo.createCustom(kind: .expense, name: "Coffee", iconName: "cup.and.saucer.fill")
+        let period = PeriodCalculator.period(for: .now, startDay: 1, timeZoneID: TimeZone.current.identifier)
+        try budgetRepo.createBudget(category: c, limit: dec("50"), effectiveFrom: period.start, alertAt80: true)
+        #expect(try budgetRepo.activeBudgets().count == 1)
+
+        try catRepo.deleteCustom(c)
+        #expect(c.deletedAt != nil)
+        #expect(try catRepo.activeCategories(kind: .expense).isEmpty)
+        // The budget is cleaned up too, so Plan shows no orphan.
+        #expect(try budgetRepo.activeBudgets().isEmpty)
+    }
+
+    @Test("Deleting a default category is prevented")
+    func defaultCategoryProtected() throws {
+        let container = try seededContainer()
+        let repo = SwiftDataCategoryRepository(context: container.mainContext)
+        let food = try #require(try repo.activeCategories(kind: .expense).first { $0.defaultKey != nil })
+
+        try repo.deleteCustom(food)   // no-op for defaults
+        #expect(food.deletedAt == nil)
+        #expect(try repo.activeCategories(kind: .expense).contains { $0.id == food.id })
+    }
 }

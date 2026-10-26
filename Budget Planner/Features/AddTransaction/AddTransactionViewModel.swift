@@ -172,6 +172,18 @@ final class AddTransactionViewModel {
         return calendar.date(from: c) ?? reference
     }
 
+    /// Re-reads the category lists from the store (after one is created in the
+    /// full New-category sheet) and optionally selects the new one.
+    func reloadCategories(select category: Category? = nil) {
+        let repo = SwiftDataCategoryRepository(context: context)
+        expenseCategories = (try? repo.activeCategories(kind: .expense)) ?? []
+        incomeCategories = (try? repo.activeCategories(kind: .income)) ?? []
+        if let category {
+            kind = category.kind == .income ? .income : .expense
+            self.category = category
+        }
+    }
+
     @discardableResult
     func addCustomCategory(named name: String) -> Category? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
