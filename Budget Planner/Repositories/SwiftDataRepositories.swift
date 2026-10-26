@@ -108,6 +108,34 @@ struct SwiftDataCategoryRepository: CategoryRepository {
         category.updatedAt = .now
     }
 
+    /// Creates a custom (user-made) category. Inserted first, then its fields
+    /// are already set via the initializer (no relationships to wire), so it is
+    /// safe to save immediately.
+    @discardableResult
+    func createCustom(kind: CategoryKind, name: String, iconName: String) throws -> Category {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let nextOrder = (try allCategories()).filter { $0.kind == kind }.map(\.sortOrder).max() ?? 0
+        let category = Category(kind: kind, customName: trimmed, iconName: iconName, sortOrder: nextOrder + 1)
+        context.insert(category)
+        try context.save()
+        return category
+    }
+
+    /// Soft-deletes a custom category. Default categories (those with a
+    /// `defaultKey`) are protected and never deleted. If the category has a
+    /// budget, that budget is soft-deleted too so Plan doesn't show an orphan.
+    /// Past transactions keep their reference (and their displayed name).
+    func deleteCustom(_ category: Category) throws {
+        guard category.defaultKey == nil else { return }
+        if let budget = try SwiftDataBudgetRepository(context: context).budget(forCategoryID: category.id) {
+            budget.deletedAt = .now
+            budget.updatedAt = .now
+        }
+        category.deletedAt = .now
+        category.updatedAt = .now
+        try context.save()
+    }
+
     func save() throws { try context.save() }
 }
 
@@ -188,11 +216,18 @@ struct SwiftDataBudgetRepository: BudgetRepository {
 
     @discardableResult
     func createBudget(category: Category, limit: Decimal, effectiveFrom: Date, alertAt80: Bool) throws -> Budget {
-        let budget = Budget(alertAt80: alertAt80, category: category)
+        // Insert the budget BEFORE wiring any relationship. Setting `category`
+        // (or `limits`) on a not-yet-inserted object forces SwiftData to point
+        // the `Category.budget` inverse at a budget with no backing yet, which
+        // traps later as "Never access a full future backing data".
+        let budget = Budget(alertAt80: alertAt80)
         context.insert(budget)
-        let budgetLimit = BudgetLimit(amount: limit, effectiveFrom: effectiveFrom, budget: budget)
+        budget.category = category
+        let budgetLimit = BudgetLimit(amount: limit, effectiveFrom: effectiveFrom)
         context.insert(budgetLimit)
-        budget.limits = [budgetLimit]
+        // Wire the relationship on one side only (the to-one inverse); SwiftData
+        // maintains `budget.limits`.
+        budgetLimit.budget = budget
         try context.save()
         return budget
     }
@@ -204,9 +239,10 @@ struct SwiftDataBudgetRepository: BudgetRepository {
             existing.amount = amount
             existing.updatedAt = .now
         } else {
-            let newLimit = BudgetLimit(amount: amount, effectiveFrom: effectiveFrom, budget: budget)
+            let newLimit = BudgetLimit(amount: amount, effectiveFrom: effectiveFrom)
             context.insert(newLimit)
-            budget.limits = (budget.limits ?? []) + [newLimit]
+            // One side only; SwiftData maintains the `budget.limits` inverse.
+            newLimit.budget = budget
         }
         budget.updatedAt = .now
         try context.save()

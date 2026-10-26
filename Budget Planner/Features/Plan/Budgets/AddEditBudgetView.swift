@@ -67,7 +67,7 @@ struct AddEditBudgetView: View {
                 .padding()
             }
             .background(Theme.background)
-            .navigationTitle(editingBudget == nil ? "Add budget" : "Edit budget")
+            .navigationTitle(editingBudget == nil ? "Set budget limit" : "Edit budget")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
